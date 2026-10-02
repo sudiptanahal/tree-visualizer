@@ -50,6 +50,7 @@ import ExplanationCard from './components/ExplanationCard';
 import TreeBuilderModal from './components/TreeBuilderModal';
 import DSAConceptGuideModal from './components/DSAConceptGuideModal';
 import CustomCodeModal from './components/CustomCodeModal';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App() {
   const [selectedAlgoId, setSelectedAlgoId] = useState('bst_delete');
@@ -519,6 +520,7 @@ export default function App() {
         isOpen={isGuideOpen}
         onClose={() => setIsGuideOpen(false)}
       />
+      <Analytics />
     </div>
   );
 }

@@ -17,26 +17,33 @@ export default function VisualizerCanvas({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hoveredNode, setHoveredNode] = useState(null);
 
-  // Resize listener
+  // Resize listener using ResizeObserver for responsive dual-view and container size changes
   useEffect(() => {
     function handleResize() {
       if (containerRef.current) {
         const { clientWidth, clientHeight } = containerRef.current;
-        setDimensions({
-          width: clientWidth || 750,
-          height: clientHeight || 480,
-        });
+        if (clientWidth > 0 && clientHeight > 0) {
+          setDimensions({
+            width: clientWidth,
+            height: clientHeight,
+          });
+        }
       }
     }
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const ro = new ResizeObserver(() => handleResize());
+    if (containerRef.current) {
+      ro.observe(containerRef.current);
+    }
+    return () => ro.disconnect();
   }, []);
 
-  // Compute tree layout
+  // Compute responsive tree layout guaranteed to fit within dimensions
   const { nodes, edges, bounds } = calculateTreeLayout(treeData, dimensions.width, dimensions.height);
 
-  // Auto-center when tree changes significantly
+  const effectiveZoom = zoom * (bounds?.autoScale || 1);
+
+  // Auto-center when tree changes or user resets
   const handleCenter = () => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
@@ -122,13 +129,16 @@ export default function VisualizerCanvas({
         </button>
         <button
           onClick={handleCenter}
-          title="Center View"
+          title="Center & Fit View"
           className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
         <button
-          onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+          onClick={() => {
+            setZoom(1);
+            setPan({ x: 0, y: 0 });
+          }}
           title="Reset"
           className="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors"
         >
@@ -137,18 +147,16 @@ export default function VisualizerCanvas({
       </div>
 
       {/* Main SVG Visualization */}
-      <svg
-        className="w-full h-full flex-1"
-        style={{
-          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-          transformOrigin: 'center center',
-          transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-        }}
-      >
+      <svg className="w-full h-full flex-1">
         <defs>
           {/* Subtle Grid Pattern */}
           <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(51, 65, 85, 0.25)" strokeWidth="0.8" />
+            <path
+              d="M 30 0 L 0 0 0 30"
+              fill="none"
+              stroke="rgba(51, 65, 85, 0.25)"
+              strokeWidth="0.8"
+            />
           </pattern>
           {/* Gradients */}
           <linearGradient id="activeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -187,7 +195,7 @@ export default function VisualizerCanvas({
         </defs>
 
         {/* Background Grid */}
-        <rect width="3000" height="3000" x="-1000" y="-1000" fill="url(#grid)" pointerEvents="none" />
+        <rect width="100%" height="100%" fill="url(#grid)" pointerEvents="none" />
 
         {/* Empty Tree State */}
         {nodes.length === 0 && (
@@ -203,224 +211,218 @@ export default function VisualizerCanvas({
           </text>
         )}
 
-        {/* Edges / Pointer Lines */}
-        <g className="edges-layer">
-          {edges.map((edge, idx) => {
-            const isLeft = edge.isLeft;
-            const midY = (edge.fromY + edge.toY) / 2;
-            const midX = (edge.fromX + edge.toX) / 2;
-            // Smooth cubic bezier curve for tree links
-            const pathData = `M ${edge.fromX} ${edge.fromY + 15} C ${edge.fromX} ${midY}, ${edge.toX} ${midY}, ${edge.toX} ${edge.toY - 22}`;
+        {/* Transform Group for Pan & Zoom */}
+        <g
+          transform={`translate(${pan.x}, ${pan.y}) scale(${effectiveZoom})`}
+          style={{
+            transformOrigin: `${dimensions.width / 2}px 60px`,
+            transition: isDragging ? 'none' : 'transform 0.15s ease-out',
+          }}
+        >
+          {/* Edges / Pointer Lines */}
+          <g className="edges-layer">
+            {edges.map((edge, idx) => {
+              const isLeft = edge.isLeft;
+              const midY = (edge.fromY + edge.toY) / 2;
+              const midX = (edge.fromX + edge.toX) / 2;
+              const pathData = `M ${edge.fromX} ${edge.fromY + 12} C ${edge.fromX} ${midY}, ${edge.toX} ${midY}, ${edge.toX} ${edge.toY - 18}`;
 
-            return (
-              <g key={`edge_${idx}`} className="transition-all duration-300">
-                {/* Glow underlay */}
-                <path
-                  d={pathData}
-                  fill="none"
-                  stroke="rgba(56, 189, 248, 0.15)"
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                />
-                {/* Main edge line */}
-                <path
-                  d={pathData}
-                  fill="none"
-                  stroke="#475569"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-                {/* Left/Right Child Indicator Pill */}
-                <g transform={`translate(${midX}, ${midY})`}>
-                  <rect
-                    x="-10"
-                    y="-8"
-                    width="20"
-                    height="16"
-                    rx="4"
-                    fill="#0f172a"
-                    stroke="#334155"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x="0"
-                    y="3.5"
-                    textAnchor="middle"
-                    fill={isLeft ? '#38bdf8' : '#ec4899'}
-                    fontSize="9"
-                    fontWeight="bold"
-                    fontFamily="monospace"
-                  >
-                    {isLeft ? 'L' : 'R'}
-                  </text>
-                </g>
-              </g>
-            );
-          })}
-        </g>
-
-        {/* Nodes Layer */}
-        <g className="nodes-layer">
-          {nodes.map((node) => {
-            const isActive = node.id === activeNodeId;
-            const isHighlighted = highlightNodeIds.includes(node.id);
-            const status = node.status;
-            const ptrs = nodePointersMap[node.id] || [];
-
-            // Choose fill style based on status
-            let fillGrad = 'url(#defaultGrad)';
-            let strokeColor = '#475569';
-            let strokeWidth = 2;
-            let filter = '';
-
-            if (status === 'matched') {
-              fillGrad = 'url(#matchedGrad)';
-              strokeColor = '#f59e0b';
-              strokeWidth = 3;
-            } else if (status === 'created') {
-              fillGrad = 'url(#createdGrad)';
-              strokeColor = '#c084fc';
-              strokeWidth = 3;
-            } else if (status === 'deleted') {
-              fillGrad = 'url(#deletedGrad)';
-              strokeColor = '#ef4444';
-              strokeWidth = 3;
-            } else if (status === 'inorder_successor') {
-              fillGrad = 'url(#succGrad)';
-              strokeColor = '#f43f5e';
-              strokeWidth = 3;
-            } else if (status === 'visited') {
-              fillGrad = 'url(#visitedGrad)';
-              strokeColor = '#10b981';
-              strokeWidth = 2.5;
-            } else if (isActive || isHighlighted) {
-              fillGrad = 'url(#activeGrad)';
-              strokeColor = '#38bdf8';
-              strokeWidth = 3.5;
-              filter = 'url(#glowActive)';
-            }
-
-            return (
-              <g
-                key={node.id}
-                transform={`translate(${node.x}, ${node.y})`}
-                onMouseEnter={() => setHoveredNode(node)}
-                onMouseLeave={() => setHoveredNode(null)}
-                className="cursor-pointer transition-transform duration-300"
-              >
-                {/* Active Focus Pulsing Ring */}
-                {isActive && (
-                  <circle
-                    r="32"
+              return (
+                <g key={`edge_${idx}`} className="transition-all duration-300">
+                  {/* Glow underlay */}
+                  <path
+                    d={pathData}
                     fill="none"
-                    stroke="#38bdf8"
-                    strokeWidth="2"
-                    strokeDasharray="4 3"
-                    className="animate-spin"
-                    style={{ transformOrigin: '0 0', animationDuration: '8s' }}
+                    stroke="rgba(56, 189, 248, 0.15)"
+                    strokeWidth="5"
+                    strokeLinecap="round"
                   />
-                )}
-
-                {/* Node Outer Circle */}
-                <circle
-                  r="23"
-                  fill={fillGrad}
-                  stroke={strokeColor}
-                  strokeWidth={strokeWidth}
-                  filter={filter}
-                  className="transition-all duration-300"
-                />
-
-                {/* Node Value */}
-                <text
-                  x="0"
-                  y="6"
-                  textAnchor="middle"
-                  fill="#ffffff"
-                  fontSize="15"
-                  fontWeight="bold"
-                  fontFamily="monospace"
-                >
-                  {node.val}
-                </text>
-
-                {/* Status Badge (e.g. Height 'h=2', 'rem=10', 'MATCH') */}
-                {node.badge && (
-                  <g transform="translate(0, 34)">
+                  {/* Main edge line */}
+                  <path
+                    d={pathData}
+                    fill="none"
+                    stroke="#475569"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                  />
+                  {/* Left/Right Child Indicator Pill */}
+                  <g transform={`translate(${midX}, ${midY})`}>
                     <rect
-                      x="-28"
-                      y="-8"
-                      width="56"
-                      height="16"
-                      rx="8"
-                      fill="#0284c7"
-                      stroke="#38bdf8"
+                      x="-8"
+                      y="-7"
+                      width="16"
+                      height="14"
+                      rx="3"
+                      fill="#0f172a"
+                      stroke="#334155"
                       strokeWidth="1"
-                    />
-                    <text
-                      x="0"
-                      y="3.5"
-                      textAnchor="middle"
-                      fill="#ffffff"
-                      fontSize="9"
-                      fontWeight="bold"
-                      fontFamily="monospace"
-                    >
-                      {node.badge}
-                    </text>
-                  </g>
-                )}
-
-                {/* Attached C++ Pointers Badge (e.g., 'root ->', 'curr ->') */}
-                {ptrs.length > 0 && (
-                  <g transform="translate(0, -32)">
-                    <rect
-                      x="-36"
-                      y="-10"
-                      width="72"
-                      height="18"
-                      rx="5"
-                      fill="#1e1b4b"
-                      stroke="#818cf8"
-                      strokeWidth="1.5"
                     />
                     <text
                       x="0"
                       y="3"
                       textAnchor="middle"
-                      fill="#c7d2fe"
-                      fontSize="9.5"
+                      fill={isLeft ? '#38bdf8' : '#ec4899'}
+                      fontSize="8"
                       fontWeight="bold"
                       fontFamily="monospace"
                     >
-                      {ptrs.join(', ')} →
+                      {isLeft ? 'L' : 'R'}
                     </text>
                   </g>
-                )}
-              </g>
-            );
-          })}
+                </g>
+              );
+            })}
+          </g>
+
+          {/* Nodes Layer */}
+          <g className="nodes-layer">
+            {nodes.map((node) => {
+              const isActive = node.id === activeNodeId;
+              const isHighlighted = highlightNodeIds.includes(node.id);
+              const status = node.status;
+              const ptrs = nodePointersMap[node.id] || [];
+              const radius = node.radius || 22;
+
+              let fillGrad = 'url(#defaultGrad)';
+              let strokeColor = '#475569';
+              let strokeWidth = 2;
+              let filter = '';
+
+              if (status === 'matched') {
+                fillGrad = 'url(#matchedGrad)';
+                strokeColor = '#f59e0b';
+                strokeWidth = 3;
+              } else if (status === 'created') {
+                fillGrad = 'url(#createdGrad)';
+                strokeColor = '#c084fc';
+                strokeWidth = 3;
+              } else if (status === 'deleted') {
+                fillGrad = 'url(#deletedGrad)';
+                strokeColor = '#ef4444';
+                strokeWidth = 3;
+              } else if (status === 'inorder_successor') {
+                fillGrad = 'url(#succGrad)';
+                strokeColor = '#f43f5e';
+                strokeWidth = 3;
+              } else if (status === 'visited') {
+                fillGrad = 'url(#visitedGrad)';
+                strokeColor = '#10b981';
+                strokeWidth = 2.5;
+              } else if (isActive || isHighlighted) {
+                fillGrad = 'url(#activeGrad)';
+                strokeColor = '#38bdf8';
+                strokeWidth = 3.5;
+                filter = 'url(#glowActive)';
+              }
+
+              return (
+                <g
+                  key={node.id}
+                  transform={`translate(${node.x}, ${node.y})`}
+                  onMouseEnter={() => setHoveredNode(node)}
+                  onMouseLeave={() => setHoveredNode(null)}
+                  className="cursor-pointer transition-transform duration-300"
+                >
+                  {/* Active Focus Pulsing Ring */}
+                  {isActive && (
+                    <circle
+                      r={radius + 7}
+                      fill="none"
+                      stroke="#38bdf8"
+                      strokeWidth="2"
+                      strokeDasharray="4 2"
+                      className="animate-spin"
+                      style={{ animationDuration: '6s' }}
+                    />
+                  )}
+
+                  {/* Node Circle */}
+                  <circle
+                    r={radius}
+                    fill={fillGrad}
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    filter={filter}
+                    className="shadow-2xl transition-all duration-300"
+                  />
+
+                  {/* Node Value Text */}
+                  <text
+                    x="0"
+                    y={radius > 20 ? '4.5' : '3.5'}
+                    textAnchor="middle"
+                    fill="#ffffff"
+                    fontSize={radius > 20 ? '13' : '11'}
+                    fontWeight="extrabold"
+                    fontFamily="monospace"
+                    className="select-none pointer-events-none"
+                  >
+                    {node.val}
+                  </text>
+
+                  {/* Pointers Tags Box */}
+                  {ptrs.length > 0 && (
+                    <g transform={`translate(0, -${radius + 14})`}>
+                      <rect
+                        x="-24"
+                        y="-8"
+                        width="48"
+                        height="16"
+                        rx="4"
+                        fill="#1e1b4b"
+                        stroke="#6366f1"
+                        strokeWidth="1.2"
+                        className="shadow-md"
+                      />
+                      <text
+                        x="0"
+                        y="3.5"
+                        textAnchor="middle"
+                        fill="#c7d2fe"
+                        fontSize="9"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        {ptrs.join(', ')}
+                      </text>
+                    </g>
+                  )}
+
+                  {/* Node State Pill Below */}
+                  {status && status !== 'default' && (
+                    <g transform={`translate(0, ${radius + 12})`}>
+                      <rect
+                        x="-16"
+                        y="-6"
+                        width="32"
+                        height="12"
+                        rx="3"
+                        fill="#022c22"
+                        stroke="#059669"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x="0"
+                        y="3"
+                        textAnchor="middle"
+                        fill="#34d399"
+                        fontSize="7"
+                        fontWeight="bold"
+                        fontFamily="sans-serif"
+                      >
+                        {status === 'visited' ? 'OK' : status.toUpperCase().slice(0, 4)}
+                      </text>
+                    </g>
+                  )}
+                </g>
+              );
+            })}
+          </g>
         </g>
       </svg>
 
-      {/* Node Details Tooltip (Bottom left) */}
-      {hoveredNode && (
-        <div className="absolute bottom-3 left-3 bg-slate-900/95 backdrop-blur-md px-3.5 py-2.5 rounded-lg border border-slate-700/80 shadow-2xl text-xs space-y-1 z-20 pointer-events-none">
-          <div className="font-bold text-sky-400 flex items-center gap-1.5">
-            <Info className="w-3.5 h-3.5" />
-            <span>TreeNode Memory Inspector</span>
-          </div>
-          <div className="text-slate-300 font-mono text-[11px]">
-            <div><span className="text-slate-500">Address:</span> 0x{(hoveredNode.val * 4096 + 1048576).toString(16)}</div>
-            <div><span className="text-slate-500">root-&gt;val:</span> <span className="text-emerald-400 font-bold">{hoveredNode.val}</span></div>
-            <div><span className="text-slate-500">root-&gt;left:</span> {hoveredNode.left ? `Node(${hoveredNode.left.val})` : 'nullptr'}</div>
-            <div><span className="text-slate-500">root-&gt;right:</span> {hoveredNode.right ? `Node(${hoveredNode.right.val})` : 'nullptr'}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Bottom Hint */}
-      <div className="absolute bottom-3 right-3 text-[11px] text-slate-500 font-mono bg-slate-950/70 px-2 py-1 rounded border border-slate-800 pointer-events-none">
+      {/* Floating Canvas Hints */}
+      <div className="absolute bottom-2 right-2 text-[10px] font-mono text-slate-500 bg-slate-900/60 px-2 py-0.5 rounded pointer-events-none border border-slate-800/40">
         Scroll to Zoom · Drag to Pan
       </div>
     </div>

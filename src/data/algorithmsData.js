@@ -542,7 +542,67 @@ bool isSymmetric(TreeNode* root) {
 }`
   },
 
-  // ================= RECURSION VISUALIZER =================
+  // ================= RECURSION DEEP-DIVE =================
+  'merge_sort': {
+    id: 'merge_sort',
+    name: 'Merge Sort (Divide & Conquer)',
+    category: 'recursion',
+    subtitle: 'Recursive array splitting and bottom-up sorted merging',
+    difficulty: 'Medium',
+    timeComplexity: 'O(N log N) in all cases',
+    spaceComplexity: 'O(N) aux memory + O(log N) stack',
+    defaultTree: [],
+    defaultArray: [38, 27, 43, 3, 9, 82, 10],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Divide & conquer: recursively splits array in half down to single-element base cases, then combines sorted subarrays bottom-up using two pointers.',
+    cppCode: `void merge(vector<int>& arr, int l, int mid, int r);
+
+void mergeSort(vector<int>& arr, int l, int r) {
+    // Base Case: 1 element or invalid range
+    if (l >= r) {
+        return;
+    }
+    
+    // 1. Divide: Find midpoint
+    int mid = l + (r - l) / 2;
+    
+    // 2. Recurse on Left and Right halves
+    mergeSort(arr, l, mid);
+    mergeSort(arr, mid + 1, r);
+    
+    // 3. Conquer: Merge the two sorted halves
+    merge(arr, l, mid, r);
+}`
+  },
+
+  'quick_sort': {
+    id: 'quick_sort',
+    name: 'Quick Sort (Partitioning & Recursion)',
+    category: 'recursion',
+    subtitle: 'Pivot partitioning and recursive sub-array sorting',
+    difficulty: 'Medium',
+    timeComplexity: 'O(N log N) avg, O(N^2) worst',
+    spaceComplexity: 'O(log N) call stack',
+    defaultTree: [],
+    defaultArray: [10, 80, 30, 90, 40, 50, 70],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Selects a pivot, partitions elements smaller to the left and larger to the right, then recursively applies quicksort to both partitions.',
+    cppCode: `int partition(vector<int>& arr, int low, int high);
+
+void quickSort(vector<int>& arr, int low, int high) {
+    if (low < high) {
+        // 1. Partition array around pivot
+        int pi = partition(arr, low, high);
+        
+        // 2. Recursively sort elements before and after pivot
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}`
+  },
+
   'fibonacci_recursion': {
     id: 'fibonacci_recursion',
     name: 'Fibonacci Recursion Tree',
@@ -568,6 +628,68 @@ bool isSymmetric(TreeNode* root) {
     
     // Combine results
     return left + right;
+}`
+  },
+
+  'subsets_backtracking': {
+    id: 'subsets_backtracking',
+    name: 'Subsets / Power Set (Backtracking)',
+    category: 'recursion',
+    subtitle: 'Binary decision tree: Pick vs Don’t Pick',
+    difficulty: 'Medium',
+    timeComplexity: 'O(2^N)',
+    spaceComplexity: 'O(N) recursion depth',
+    defaultTree: [],
+    defaultArray: [1, 2, 3],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'At each index, makes a binary decision: either include nums[i] in the current subset and recurse, or backtrack and exclude it.',
+    cppCode: `void generateSubsets(vector<int>& nums, int index, vector<int>& current, vector<vector<int>>& result) {
+    // Base Case: explored all elements
+    if (index == nums.size()) {
+        result.push_back(current);
+        return;
+    }
+    
+    // Decision 1: Pick / Include nums[index]
+    current.push_back(nums[index]);
+    generateSubsets(nums, index + 1, current, result);
+    
+    // Decision 2: Backtrack & Don't Pick (Exclude)
+    current.pop_back();
+    generateSubsets(nums, index + 1, current, result);
+}`
+  },
+
+  'tower_of_hanoi': {
+    id: 'tower_of_hanoi',
+    name: 'Tower of Hanoi (3-Pegs Recursion)',
+    category: 'recursion',
+    subtitle: 'Classic 3-rod disk movement recursion tree',
+    difficulty: 'Easy',
+    timeComplexity: 'O(2^N - 1)',
+    spaceComplexity: 'O(N) stack frames',
+    defaultTree: [],
+    defaultParams: { n: 3 },
+    paramConfigs: [
+      { name: 'n', label: 'Disks (N)', type: 'number', default: 3, min: 1, max: 4 }
+    ],
+    summary: 'Recursively moves n-1 disks from source to auxiliary, moves the largest disk directly to destination, and then moves the n-1 disks from auxiliary to destination.',
+    cppCode: `void towerOfHanoi(int n, char fromRod, char toRod, char auxRod) {
+    // Base Case
+    if (n == 1) {
+        cout << "Move disk 1: " << fromRod << " -> " << toRod << endl;
+        return;
+    }
+    
+    // 1. Move n-1 disks source -> aux
+    towerOfHanoi(n - 1, fromRod, auxRod, toRod);
+    
+    // 2. Move nth disk source -> dest
+    cout << "Move disk " << n << ": " << fromRod << " -> " << toRod << endl;
+    
+    // 3. Move n-1 disks aux -> dest
+    towerOfHanoi(n - 1, auxRod, toRod, fromRod);
 }`
   },
 

@@ -29,7 +29,13 @@ import {
   generateUndirectedCycleSteps,
 } from './engine/graphAlgorithms';
 
-import { generateFibonacciSteps } from './engine/recursionAlgorithms';
+import {
+  generateFibonacciSteps,
+  generateMergeSortSteps,
+  generateQuickSortSteps,
+  generateSubsetsSteps,
+  generateTowerOfHanoiSteps,
+} from './engine/recursionAlgorithms';
 
 // Components
 import Navbar from './components/Navbar';
@@ -76,7 +82,7 @@ export default function App() {
       return {
         id: 'custom_cpp_code',
         name: customCodeData.name || 'Custom C++ Solution',
-        category: 'custom',
+        category: customCodeData.isRecursion ? 'recursion' : 'custom',
         cppCode: customCodeData.code,
         paramConfigs: [],
       };
@@ -149,8 +155,20 @@ export default function App() {
       case 'cycle_detection_undirected':
         generated = generateUndirectedCycleSteps(graphToUse, params.startNode ?? 0);
         break;
+      case 'merge_sort':
+        generated = generateMergeSortSteps(algo.defaultArray || [38, 27, 43, 3, 9, 82, 10]);
+        break;
+      case 'quick_sort':
+        generated = generateQuickSortSteps(algo.defaultArray || [10, 80, 30, 90, 40, 50, 70]);
+        break;
       case 'fibonacci_recursion':
         generated = generateFibonacciSteps(params.n ?? 4);
+        break;
+      case 'subsets_backtracking':
+        generated = generateSubsetsSteps(algo.defaultArray || [1, 2, 3]);
+        break;
+      case 'tower_of_hanoi':
+        generated = generateTowerOfHanoiSteps(params.n ?? 3);
         break;
       default:
         generated = generateBstInsertSteps(treeToUse, 5);
@@ -302,6 +320,11 @@ export default function App() {
     setSteps(customData.steps);
     setCurrentStepIndex(0);
     setIsPlaying(false);
+    if (customData.isRecursion) {
+      setViewMode('recursion');
+    } else {
+      setViewMode('tree');
+    }
   };
 
   const handleSaveApiKey = (newKey) => {
@@ -383,6 +406,9 @@ export default function App() {
               <RecursionTreeView
                 recursionTree={currentStep.recursionTree}
                 activeNodeId={currentStep.activeNodeId}
+                arrayState={currentStep.arrayState}
+                pointers={currentStep.pointers}
+                explanation={currentStep.explanation}
               />
             ) : viewMode === 'dual' ? (
               <div className="grid grid-cols-2 gap-2 h-full">
@@ -396,6 +422,9 @@ export default function App() {
                 <RecursionTreeView
                   recursionTree={currentStep.recursionTree}
                   activeNodeId={currentStep.activeNodeId}
+                  arrayState={currentStep.arrayState}
+                  pointers={currentStep.pointers}
+                  explanation={currentStep.explanation}
                 />
               </div>
             ) : (

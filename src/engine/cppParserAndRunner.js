@@ -1,4 +1,29 @@
 import { parseArrayToTree, cloneTree, createTreeNode } from '../utils/treeLayout';
+import { runCustomRecursionCode } from './recursionAlgorithms';
+
+export function isRecursionOnlyCode(cppCode) {
+  const codeLower = (cppCode || '').toLowerCase();
+  // If it explicitly references TreeNode or root pointers, it is a tree algorithm
+  if (codeLower.includes('treenode') || codeLower.includes('root->left') || codeLower.includes('root->right') || codeLower.includes('node->left') || codeLower.includes('node->right')) {
+    return false;
+  }
+  // Otherwise if it matches recursion signatures
+  if (
+    codeLower.includes('mergesort') ||
+    codeLower.includes('quicksort') ||
+    codeLower.includes('fib') ||
+    codeLower.includes('subset') ||
+    codeLower.includes('hanoi') ||
+    codeLower.includes('partition') ||
+    codeLower.includes('vector<int>') ||
+    codeLower.includes('int l, int r') ||
+    codeLower.includes('int low, int high') ||
+    codeLower.includes('int n')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 function snapshotTree(root, nodeStatuses = {}) {
   if (!root) return null;
@@ -15,17 +40,22 @@ function snapshotTree(root, nodeStatuses = {}) {
 }
 
 /**
- * Universal AST-like line-by-line C++ Tree Code Runner
- * Handles:
- * - Recursive traversals (Inorder, Preorder, Postorder)
- * - Divide & conquer (Height, Count, Sum, Diameter, Balanced, Same Tree)
- * - Path operations (Path sum, Root-to-leaf paths, Digits accumulation)
- * - BST operations (Search, Insert, Delete, Validate, LCA, Kth smallest)
- * - Tree mutations (Invert, Mirror, Swap, Re-link)
+ * Universal AST-like line-by-line C++ Code Runner
+ * Automatically distinguishes between:
+ * 1. Tree Algorithms (TreeNode*, BST, traversals, path operations)
+ * 2. Pure Recursion Algorithms (MergeSort, QuickSort, Fibonacci, Subsets, Tower of Hanoi)
  */
-export function runCustomCppCode(cppCode, treeArray, initialParams = {}) {
+export function runCustomCppCode(cppCode, treeArrayOrCustomInput, initialParams = {}, forcedMode = null) {
+  // If forcedMode is 'recursion' or auto-detected as pure recursion code
+  const isRecOnly = forcedMode === 'recursion' || (forcedMode !== 'tree' && isRecursionOnlyCode(cppCode));
+
+  if (isRecOnly) {
+    return runCustomRecursionCode(cppCode, Array.isArray(treeArrayOrCustomInput) ? treeArrayOrCustomInput : [38, 27, 43, 3, 9, 82, 10], initialParams);
+  }
+
   const lines = cppCode.split('\n');
   const totalLines = lines.length;
+  const treeArray = Array.isArray(treeArrayOrCustomInput) ? treeArrayOrCustomInput : [3, 9, 20, null, null, 15, 7];
   const treeState = cloneTree(parseArrayToTree(treeArray));
 
   // Find line numbers for key statements in the user's C++ code

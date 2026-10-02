@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import confetti from 'canvas-confetti';
+import { Analytics } from '@vercel/analytics/react';
 import { ALGORITHMS } from './data/algorithmsData';
 import { parseArrayToTree, cloneTree } from './utils/treeLayout';
 
@@ -519,6 +520,8 @@ export default function App() {
         isOpen={isGuideOpen}
         onClose={() => setIsGuideOpen(false)}
       />
+
+      <Analytics />
     </div>
   );
 }

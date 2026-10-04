@@ -21,6 +21,12 @@ import {
   generateDiameterSteps,
   generateBalancedTreeSteps,
   generateSymmetricTreeSteps,
+  generateFlattenTreeSteps,
+  generateMergeTwoTreesSteps,
+  generateSameTreeSteps,
+  generateSubtreeSteps,
+  generateMergeMultiTreesSteps,
+  generateSameMultiTreesSteps,
 } from './engine/treeAlgorithms';
 
 import {
@@ -29,7 +35,13 @@ import {
   generateUndirectedCycleSteps,
 } from './engine/graphAlgorithms';
 
-import { generateFibonacciSteps } from './engine/recursionAlgorithms';
+import {
+  generateFibonacciSteps,
+  generateMergeSortSteps,
+  generateQuickSortSteps,
+  generateSubsetsSteps,
+  generateTowerOfHanoiSteps,
+} from './engine/recursionAlgorithms';
 
 // Components
 import Navbar from './components/Navbar';
@@ -49,6 +61,8 @@ export default function App() {
   const [selectedAlgoId, setSelectedAlgoId] = useState('bst_delete');
   const [algoParams, setAlgoParams] = useState({ key: 3, value: 5, val: 6, p: 2, q: 8, targetSum: 22, n: 4, startNode: 0 });
   const [customTree, setCustomTree] = useState(null);
+  const [customTree2, setCustomTree2] = useState(null);
+  const [customTrees, setCustomTrees] = useState(null);
   const [customGraph, setCustomGraph] = useState(null);
 
   // Custom C++ Code State
@@ -76,7 +90,7 @@ export default function App() {
       return {
         id: 'custom_cpp_code',
         name: customCodeData.name || 'Custom C++ Solution',
-        category: 'custom',
+        category: customCodeData.isRecursion ? 'recursion' : 'custom',
         cppCode: customCodeData.code,
         paramConfigs: [],
       };
@@ -85,13 +99,45 @@ export default function App() {
   }, [customCodeData, selectedAlgoId]);
 
   // Generator for standard algorithms
-  const generateStepsForAlgo = useCallback((algoId, params, userTree, userGraph) => {
+  const generateStepsForAlgo = useCallback((algoId, params, userTree, userGraph, userTree2 = null, userMultiTrees = null) => {
     const algo = ALGORITHMS[algoId] || ALGORITHMS['bst_delete'];
-    let treeToUse = userTree ? cloneTree(userTree) : parseArrayToTree(algo.defaultTree);
+    let treeToUse = userTree ? cloneTree(userTree) : parseArrayToTree(algo.defaultTree, 't1');
+    let tree2ToUse = userTree2 ? cloneTree(userTree2) : parseArrayToTree(algo.defaultTree2, 't2');
     let graphToUse = userGraph || algo.defaultGraph;
     let generated = [];
 
     switch (algoId) {
+      case 'merge_three_trees':
+        generated = generateMergeMultiTreesSteps(
+          userMultiTrees && userMultiTrees.length >= 3
+            ? userMultiTrees
+            : algo.defaultMultiTrees?.map((mt) => ({ ...mt, tree: parseArrayToTree(mt.data, mt.id) }))
+        );
+        break;
+      case 'same_three_trees':
+        generated = generateSameMultiTreesSteps(
+          userMultiTrees && userMultiTrees.length >= 3
+            ? userMultiTrees
+            : algo.defaultMultiTrees?.map((mt) => ({ ...mt, tree: parseArrayToTree(mt.data, mt.id) }))
+        );
+        break;
+      case 'merge_two_trees':
+        if (userMultiTrees && userMultiTrees.length >= 2) {
+          generated = generateMergeMultiTreesSteps(userMultiTrees);
+        } else {
+          generated = generateMergeTwoTreesSteps(treeToUse, tree2ToUse);
+        }
+        break;
+      case 'same_tree':
+        if (userMultiTrees && userMultiTrees.length >= 2) {
+          generated = generateSameMultiTreesSteps(userMultiTrees);
+        } else {
+          generated = generateSameTreeSteps(treeToUse, tree2ToUse);
+        }
+        break;
+      case 'subtree_of_tree':
+        generated = generateSubtreeSteps(treeToUse, tree2ToUse);
+        break;
       case 'bst_insert':
         generated = generateBstInsertSteps(treeToUse, params.value ?? 5);
         break;
@@ -122,6 +168,9 @@ export default function App() {
       case 'invert_tree':
         generated = generateInvertTreeSteps(treeToUse);
         break;
+      case 'flatten_binary_tree':
+        generated = generateFlattenTreeSteps(treeToUse);
+        break;
       case 'lca_bst':
         generated = generateLcaBstSteps(treeToUse, params.p ?? 2, params.q ?? 8);
         break;
@@ -149,8 +198,20 @@ export default function App() {
       case 'cycle_detection_undirected':
         generated = generateUndirectedCycleSteps(graphToUse, params.startNode ?? 0);
         break;
+      case 'merge_sort':
+        generated = generateMergeSortSteps(algo.defaultArray || [38, 27, 43, 3, 9, 82, 10]);
+        break;
+      case 'quick_sort':
+        generated = generateQuickSortSteps(algo.defaultArray || [10, 80, 30, 90, 40, 50, 70]);
+        break;
       case 'fibonacci_recursion':
         generated = generateFibonacciSteps(params.n ?? 4);
+        break;
+      case 'subsets_backtracking':
+        generated = generateSubsetsSteps(algo.defaultArray || [1, 2, 3]);
+        break;
+      case 'tower_of_hanoi':
+        generated = generateTowerOfHanoiSteps(params.n ?? 3);
         break;
       default:
         generated = generateBstInsertSteps(treeToUse, 5);
@@ -161,12 +222,12 @@ export default function App() {
   // Regenerate steps ONLY when standard algorithm / params / custom tree change
   useEffect(() => {
     if (!customCodeData) {
-      const newSteps = generateStepsForAlgo(selectedAlgoId, algoParams, customTree, customGraph);
+      const newSteps = generateStepsForAlgo(selectedAlgoId, algoParams, customTree, customGraph, customTree2, customTrees);
       setSteps(newSteps);
       setCurrentStepIndex(0);
       setIsPlaying(false);
     }
-  }, [selectedAlgoId, algoParams, customTree, customGraph, customCodeData, generateStepsForAlgo]);
+  }, [selectedAlgoId, algoParams, customTree, customTree2, customTrees, customGraph, customCodeData, generateStepsForAlgo]);
 
   // Active step object
   const currentStep = steps[currentStepIndex] || {
@@ -292,8 +353,16 @@ export default function App() {
     setAlgoParams((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleApplyCustomTree = (newTree) => {
-    setCustomTree(newTree);
+  const handleApplyCustomTree = (newTreeOrList, newTree2 = null) => {
+    if (Array.isArray(newTreeOrList)) {
+      setCustomTrees(newTreeOrList);
+      setCustomTree(newTreeOrList[0]?.tree || newTreeOrList[0] || null);
+      setCustomTree2(newTreeOrList[1]?.tree || newTreeOrList[1] || null);
+    } else {
+      setCustomTrees(null);
+      setCustomTree(newTreeOrList);
+      setCustomTree2(newTree2);
+    }
   };
 
   const handleApplyCustomSteps = (customData) => {
@@ -302,6 +371,14 @@ export default function App() {
     setSteps(customData.steps);
     setCurrentStepIndex(0);
     setIsPlaying(false);
+    if (customData.params) {
+      setAlgoParams((prev) => ({ ...prev, ...customData.params }));
+    }
+    if (customData.isRecursion) {
+      setViewMode('recursion');
+    } else {
+      setViewMode('tree');
+    }
   };
 
   const handleSaveApiKey = (newKey) => {
@@ -310,8 +387,14 @@ export default function App() {
   };
 
   const handleManualRebuild = () => {
-    if (!customCodeData) {
-      const newSteps = generateStepsForAlgo(selectedAlgoId, algoParams, customTree, customGraph);
+    if (customCodeData) {
+      const mode = customCodeData.isMultiTree ? 'multi_tree' : customCodeData.isRecursion ? 'recursion' : 'tree';
+      const newSteps = runCustomCppCode(customCodeData.code, customTree, algoParams, mode, customTree2);
+      setSteps(newSteps);
+      setCurrentStepIndex(0);
+      setIsPlaying(false);
+    } else {
+      const newSteps = generateStepsForAlgo(selectedAlgoId, algoParams, customTree, customGraph, customTree2, customTrees);
       setSteps(newSteps);
       setCurrentStepIndex(0);
       setIsPlaying(false);
@@ -351,6 +434,7 @@ export default function App() {
       {/* Top Navbar */}
       <Navbar
         selectedAlgoId={customCodeData ? 'custom_cpp_code' : selectedAlgoId}
+        currentAlgo={currentAlgo}
         onSelectAlgo={handleSelectAlgo}
         algoParams={algoParams}
         onChangeParam={handleChangeParam}
@@ -383,11 +467,14 @@ export default function App() {
               <RecursionTreeView
                 recursionTree={currentStep.recursionTree}
                 activeNodeId={currentStep.activeNodeId}
+                arrayState={currentStep.arrayState}
+                pointers={currentStep.pointers}
+                explanation={currentStep.explanation}
               />
             ) : viewMode === 'dual' ? (
               <div className="grid grid-cols-2 gap-2 h-full">
                 <VisualizerCanvas
-                  treeData={currentStep.tree}
+                  treeData={currentStep.multiTrees || currentStep.tree}
                   activeNodeId={currentStep.activeNodeId}
                   highlightNodeIds={currentStep.highlightNodeIds}
                   pointers={currentStep.pointers}
@@ -396,11 +483,14 @@ export default function App() {
                 <RecursionTreeView
                   recursionTree={currentStep.recursionTree}
                   activeNodeId={currentStep.activeNodeId}
+                  arrayState={currentStep.arrayState}
+                  pointers={currentStep.pointers}
+                  explanation={currentStep.explanation}
                 />
               </div>
             ) : (
               <VisualizerCanvas
-                treeData={currentStep.tree}
+                treeData={currentStep.multiTrees || currentStep.tree}
                 activeNodeId={currentStep.activeNodeId}
                 highlightNodeIds={currentStep.highlightNodeIds}
                 pointers={currentStep.pointers}

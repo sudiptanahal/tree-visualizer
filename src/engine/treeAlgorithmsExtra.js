@@ -1795,3 +1795,1386 @@ export function generateSymmetricTreeSteps(initialTree) {
   isMirrorHelper(treeState.left, treeState.right);
   return steps;
 }
+
+// ================= 10. FLATTEN BINARY TREE TO LINKED LIST (LEETCODE 114) =================
+export function generateFlattenTreeSteps(initialTreeState) {
+  const steps = [];
+  const treeState = cloneTree(initialTreeState);
+  let curr = treeState;
+
+  const stack = [
+    { id: 'frame_1', func: 'flatten', args: { root: curr ? `Node(${curr.val})` : 'nullptr' }, line: 2, returnVal: null }
+  ];
+
+  const recursionNodes = [
+    { id: 'call_1', label: `flatten(${curr ? `Node(${curr.val})` : 'nullptr'})`, parentId: null, status: 'active', returnVal: null }
+  ];
+
+  // Step 1: Entry
+  steps.push({
+    line: 1,
+    tree: snapshotTree(treeState, curr ? { [curr.id]: { status: 'active', badge: 'root' } } : {}),
+    activeNodeId: curr ? curr.id : null,
+    highlightNodeIds: curr ? [curr.id] : [],
+    pointers: { root: curr ? `Node(${curr.val})` : 'nullptr', curr: curr ? `Node(${curr.val})` : 'nullptr' },
+    callStack: JSON.parse(JSON.stringify(stack)),
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: 'Line 1: Entering flatten(root). Starting in-place binary tree flattening into a linked list.',
+    variables: { curr: curr ? curr.val : 'nullptr' },
+    actionType: 'CALL',
+    output: [],
+  });
+
+  // Step 2: TreeNode* curr = root;
+  steps.push({
+    line: 2,
+    tree: snapshotTree(treeState, curr ? { [curr.id]: { status: 'active', badge: 'curr' } } : {}),
+    activeNodeId: curr ? curr.id : null,
+    highlightNodeIds: curr ? [curr.id] : [],
+    pointers: { curr: curr ? `Node(${curr.val})` : 'nullptr' },
+    callStack: JSON.parse(JSON.stringify(stack)),
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: `Line 2: Initializing pointer: TreeNode* curr = root (pointing to Node(${curr ? curr.val : 'nullptr'})).`,
+    variables: { curr: curr ? curr.val : 'nullptr' },
+    actionType: 'POINTER_UPDATE',
+    output: [],
+  });
+
+  while (curr) {
+    stack[0].line = 3;
+    // Step: while (curr != nullptr)
+    steps.push({
+      line: 3,
+      tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' } }),
+      activeNodeId: curr.id,
+      highlightNodeIds: [curr.id],
+      pointers: { curr: `Node(${curr.val})` },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 3: Loop condition check: curr is Node(${curr.val}) != nullptr (TRUE).`,
+      variables: { curr: curr.val, hasLeft: Boolean(curr.left) },
+      actionType: 'CHECK',
+      output: [],
+    });
+
+    stack[0].line = 4;
+    // Step: if (curr->left != nullptr)
+    if (curr.left) {
+      steps.push({
+        line: 4,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' }, [curr.left.id]: { status: 'highlight', badge: 'left' } }),
+        activeNodeId: curr.id,
+        highlightNodeIds: [curr.id, curr.left.id],
+        pointers: { curr: `Node(${curr.val})`, 'curr->left': `Node(${curr.left.val})` },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 4: curr->left is NOT nullptr (points to Node(${curr.left.val})). Left subtree needs flattening.`,
+        variables: { curr: curr.val, 'curr->left': curr.left.val },
+        actionType: 'CHECK',
+        output: [],
+      });
+
+      // Find predecessor: TreeNode* prev = curr->left;
+      let prev = curr.left;
+      stack[0].line = 6;
+      steps.push({
+        line: 6,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' }, [prev.id]: { status: 'matched', badge: 'prev' } }),
+        activeNodeId: prev.id,
+        highlightNodeIds: [curr.id, prev.id],
+        pointers: { curr: `Node(${curr.val})`, prev: `Node(${prev.val})` },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 6: Initializing predecessor search: TreeNode* prev = curr->left (Node(${prev.val})).`,
+        variables: { curr: curr.val, prev: prev.val },
+        actionType: 'POINTER_UPDATE',
+        output: [],
+      });
+
+      while (prev.right) {
+        prev = prev.right;
+        stack[0].line = 8;
+        steps.push({
+          line: 8,
+          tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' }, [prev.id]: { status: 'matched', badge: 'prev' } }),
+          activeNodeId: prev.id,
+          highlightNodeIds: [curr.id, prev.id],
+          pointers: { curr: `Node(${curr.val})`, prev: `Node(${prev.val}) [traversing]` },
+          callStack: JSON.parse(JSON.stringify(stack)),
+          recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+          explanation: `Line 8: Traversing to rightmost node of left subtree: prev = prev->right (Node(${prev.val})).`,
+          variables: { prev: prev.val },
+          actionType: 'POINTER_UPDATE',
+          output: [],
+        });
+      }
+
+      // 1. Splice: prev->right = curr->right;
+      const oldCurrRight = curr.right;
+      prev.right = curr.right;
+      stack[0].line = 12;
+      steps.push({
+        line: 12,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' }, [prev.id]: { status: 'created', badge: 'prev->right' } }),
+        activeNodeId: prev.id,
+        highlightNodeIds: [curr.id, prev.id],
+        pointers: {
+          curr: `Node(${curr.val})`,
+          prev: `Node(${prev.val})`,
+          'prev->right': prev.right ? `Node(${prev.right.val})` : 'nullptr',
+        },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 12: Splicing: Connected prev->right (Node(${prev.val})) to curr->right (${oldCurrRight ? `Node(${oldCurrRight.val})` : 'nullptr'}).`,
+        variables: { prev: prev.val, 'prev->right': prev.right ? prev.right.val : null },
+        actionType: 'POINTER_UPDATE',
+        output: [],
+      });
+
+      // 2. Move left to right: curr->right = curr->left;
+      curr.right = curr.left;
+      stack[0].line = 14;
+      steps.push({
+        line: 14,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'created', badge: 'curr->right' } }),
+        activeNodeId: curr.id,
+        highlightNodeIds: [curr.id],
+        pointers: {
+          curr: `Node(${curr.val})`,
+          'curr->right': `Node(${curr.right.val})`,
+        },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 14: Moving left subtree to right: curr->right = curr->left (Node(${curr.right.val})).`,
+        variables: { curr: curr.val, 'curr->right': curr.right.val },
+        actionType: 'POINTER_UPDATE',
+        output: [],
+      });
+
+      // 3. Nullify left: curr->left = nullptr;
+      curr.left = null;
+      stack[0].line = 16;
+      steps.push({
+        line: 16,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'visited', badge: 'curr' } }),
+        activeNodeId: curr.id,
+        highlightNodeIds: [curr.id],
+        pointers: {
+          curr: `Node(${curr.val})`,
+          'curr->left': 'nullptr',
+          'curr->right': `Node(${curr.right.val})`,
+        },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 16: Set curr->left = nullptr. Left branch disconnected; subtree is now part of the right chain.`,
+        variables: { curr: curr.val, 'curr->left': null },
+        actionType: 'POINTER_UPDATE',
+        output: [],
+      });
+    } else {
+      steps.push({
+        line: 4,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'visited', badge: 'curr' } }),
+        activeNodeId: curr.id,
+        highlightNodeIds: [curr.id],
+        pointers: { curr: `Node(${curr.val})`, 'curr->left': 'nullptr' },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 4: curr->left is nullptr on Node(${curr.val}). No left subtree to rewire.`,
+        variables: { curr: curr.val },
+        actionType: 'CHECK',
+        output: [],
+      });
+    }
+
+    // Move curr to curr->right
+    curr = curr.right;
+    stack[0].line = 19;
+    steps.push({
+      line: 19,
+      tree: snapshotTree(treeState, curr ? { [curr.id]: { status: 'active', badge: 'curr' } } : {}),
+      activeNodeId: curr ? curr.id : null,
+      highlightNodeIds: curr ? [curr.id] : [],
+      pointers: { curr: curr ? `Node(${curr.val})` : 'nullptr' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 19: Advancing curr: curr = curr->right (${curr ? `Node(${curr.val})` : 'nullptr'}).`,
+      variables: { curr: curr ? curr.val : 'nullptr' },
+      actionType: 'POINTER_UPDATE',
+      output: [],
+    });
+  }
+
+  // Final Step: Complete
+  stack[0].line = 21;
+  stack[0].returnVal = 'void';
+  recursionNodes[0].status = 'returned';
+
+  steps.push({
+    line: 21,
+    tree: snapshotTree(treeState),
+    activeNodeId: null,
+    highlightNodeIds: [],
+    pointers: { status: 'Flattening Complete', result: 'Right-Skewed Linked List' },
+    callStack: [],
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: 'Line 21: Flatten algorithm complete! All nodes are chained linearly along right pointers (1 -> 2 -> 3 -> 4 -> 5 -> 6) matching pre-order traversal.',
+    variables: { completed: true },
+    actionType: 'COMPLETE',
+    output: ['Flattened Linked List: 1 -> 2 -> 3 -> 4 -> 5 -> 6'],
+  });
+
+  return steps;
+}
+
+
+// ==========================================
+// MULTI-TREE OPERATIONS (2+ Trees)
+// ==========================================
+
+/**
+ * LeetCode 617: Merge Two Binary Trees
+ * TreeNode* mergeTrees(TreeNode* root1, TreeNode* root2)
+ */
+export function generateMergeTwoTreesSteps(tree1Input, tree2Input) {
+  const steps = [];
+  const t1Root = cloneTree(tree1Input);
+  const t2Root = cloneTree(tree2Input);
+
+  let stack = [];
+  let recursionNodes = [];
+  let callIdCounter = 0;
+
+  function merge(node1, node2, parent1 = null, isLeft = false) {
+    const callId = `call_${++callIdCounter}`;
+    const n1Label = node1 ? `Node(${node1.val})` : 'nullptr';
+    const n2Label = node2 ? `Node(${node2.val})` : 'nullptr';
+
+    const frame = {
+      id: callId,
+      func: 'mergeTrees',
+      args: { root1: n1Label, root2: n2Label },
+      line: 1,
+      returnVal: null,
+    };
+    stack.push(frame);
+
+    const recNode = {
+      id: callId,
+      label: `merge(${n1Label}, ${n2Label})`,
+      parentId: stack.length > 1 ? stack[stack.length - 2].id : null,
+      status: 'active',
+      returnVal: null,
+    };
+    recursionNodes.push({ ...recNode });
+
+    const getSnapshot = (n1Status = 'active', n2Status = 'active') => [
+      {
+        id: 'tree1',
+        title: 'Tree 1 (root1 & Result)',
+        theme: 'sky',
+        tree: snapshotTree(t1Root, node1 ? { [node1.id]: { status: n1Status, badge: 'root1' } } : {}),
+      },
+      {
+        id: 'tree2',
+        title: 'Tree 2 (root2)',
+        theme: 'purple',
+        tree: snapshotTree(t2Root, node2 ? { [node2.id]: { status: n2Status, badge: 'root2' } } : {}),
+      },
+    ];
+
+    // Line 1: Function Entry
+    steps.push({
+      line: 1,
+      multiTrees: getSnapshot('active', 'active'),
+      activeNodeId: node1 ? node1.id : (node2 ? node2.id : null),
+      highlightNodeIds: [node1?.id, node2?.id].filter(Boolean),
+      pointers: { root1: n1Label, root2: n2Label },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 1: Entering mergeTrees(root1 = ${n1Label}, root2 = ${n2Label}).`,
+      variables: { root1: n1Label, root2: n2Label },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    // Line 2: if (root1 == nullptr) return root2;
+    steps.push({
+      line: 2,
+      multiTrees: getSnapshot(node1 ? 'active' : 'deleted', node2 ? 'created' : 'visited'),
+      activeNodeId: node2?.id || null,
+      highlightNodeIds: [node1?.id, node2?.id].filter(Boolean),
+      pointers: { root1: n1Label, root2: n2Label, 'root1 == nullptr': !node1 ? 'true' : 'false' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: !node1
+        ? `Line 2: Base case HIT! root1 is nullptr. Returning root2 (${n2Label}) to splice its subtree into the merged tree.`
+        : `Line 2: root1 is NOT nullptr (${n1Label}). Continuing check.`,
+      variables: { root1IsNull: !node1 },
+      actionType: !node1 ? 'BASE_CASE' : 'CHECK',
+      output: [],
+    });
+
+    if (!node1) {
+      if (parent1 && node2) {
+        if (isLeft) parent1.left = cloneTree(node2);
+        else parent1.right = cloneTree(node2);
+      }
+      frame.returnVal = n2Label;
+      const rNode = recursionNodes.find((n) => n.id === callId);
+      if (rNode) { rNode.status = 'returned'; rNode.returnVal = n2Label; }
+      stack.pop();
+      return node2;
+    }
+
+    // Line 3: if (root2 == nullptr) return root1;
+    steps.push({
+      line: 3,
+      multiTrees: getSnapshot('created', node2 ? 'active' : 'deleted'),
+      activeNodeId: node1.id,
+      highlightNodeIds: [node1.id, node2?.id].filter(Boolean),
+      pointers: { root1: n1Label, root2: n2Label, 'root2 == nullptr': !node2 ? 'true' : 'false' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: !node2
+        ? `Line 3: Base case HIT! root2 is nullptr. Returning root1 (${n1Label}) unchanged.`
+        : `Line 3: root2 is NOT nullptr (${n2Label}). Both nodes exist; merging values!`,
+      variables: { root2IsNull: !node2 },
+      actionType: !node2 ? 'BASE_CASE' : 'CHECK',
+      output: [],
+    });
+
+    if (!node2) {
+      frame.returnVal = n1Label;
+      const rNode = recursionNodes.find((n) => n.id === callId);
+      if (rNode) { rNode.status = 'returned'; rNode.returnVal = n1Label; }
+      stack.pop();
+      return node1;
+    }
+
+    // Line 5: root1->val += root2->val;
+    const oldV1 = node1.val;
+    const v2 = node2.val;
+    node1.val += v2;
+
+    steps.push({
+      line: 5,
+      multiTrees: getSnapshot('created', 'matched'),
+      activeNodeId: node1.id,
+      highlightNodeIds: [node1.id, node2.id],
+      pointers: {
+        'root1->val (merged)': `${oldV1} + ${v2} = ${node1.val}`,
+        'root2->val': v2,
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 5: In-place Merge: root1->val += root2->val (${oldV1} + ${v2} = ${node1.val}). Updated root1 node value.`,
+      variables: { oldVal: oldV1, addedVal: v2, mergedVal: node1.val },
+      actionType: 'VALUE_UPDATE',
+      output: [],
+    });
+
+    // Line 6: root1->left = mergeTrees(root1->left, root2->left);
+    frame.line = 6;
+    steps.push({
+      line: 6,
+      multiTrees: getSnapshot('active', 'active'),
+      activeNodeId: node1.id,
+      highlightNodeIds: [node1.id],
+      pointers: {
+        root1: `Node(${node1.val})`,
+        'calling left subtrees': `root1->left & root2->left`,
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 6: Recursing on left children: Calling mergeTrees(root1->left, root2->left). Frame on Node(${node1.val}) pauses.`,
+      variables: { branch: 'LEFT' },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    merge(node1.left, node2.left, node1, true);
+
+    // Line 7: root1->right = mergeTrees(root1->right, root2->right);
+    frame.line = 7;
+    steps.push({
+      line: 7,
+      multiTrees: getSnapshot('active', 'active'),
+      activeNodeId: node1.id,
+      highlightNodeIds: [node1.id],
+      pointers: {
+        root1: `Node(${node1.val})`,
+        'calling right subtrees': `root1->right & root2->right`,
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 7: Recursing on right children: Calling mergeTrees(root1->right, root2->right). Frame on Node(${node1.val}) pauses.`,
+      variables: { branch: 'RIGHT' },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    merge(node1.right, node2.right, node1, false);
+
+    // Line 9: return root1;
+    frame.line = 9;
+    frame.returnVal = `Node(${node1.val})`;
+    const rNode = recursionNodes.find((n) => n.id === callId);
+    if (rNode) { rNode.status = 'returned'; rNode.returnVal = `Node(${node1.val})`; }
+
+    steps.push({
+      line: 9,
+      multiTrees: getSnapshot('matched', 'visited'),
+      activeNodeId: node1.id,
+      highlightNodeIds: [node1.id],
+      pointers: { returnVal: `Node(${node1.val})` },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 9: Returning merged subtree root Node(${node1.val}) up call stack.`,
+      variables: { returnVal: `Node(${node1.val})` },
+      actionType: 'RETURN',
+      output: [],
+    });
+
+    stack.pop();
+    return node1;
+  }
+
+  merge(t1Root, t2Root);
+
+  // Final Complete Step
+  steps.push({
+    line: 9,
+    multiTrees: [
+      {
+        id: 'tree1',
+        title: 'Merged Result Tree (root1)',
+        theme: 'emerald',
+        tree: snapshotTree(t1Root),
+      },
+      {
+        id: 'tree2',
+        title: 'Tree 2 (root2)',
+        theme: 'purple',
+        tree: snapshotTree(t2Root),
+      },
+    ],
+    activeNodeId: null,
+    highlightNodeIds: [],
+    pointers: { status: 'Merge Complete', output: 'Both trees merged successfully' },
+    callStack: [],
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: 'Merge complete! Tree 1 now contains the unified merged binary tree with combined values and spliced branches.',
+    variables: { completed: true },
+    actionType: 'COMPLETE',
+    output: ['Merged binary tree successfully created in-place.'],
+  });
+
+  return steps;
+}
+
+/**
+ * LeetCode 100: Same Tree / Identical Trees Check
+ * bool isSameTree(TreeNode* p, TreeNode* q)
+ */
+export function generateSameTreeSteps(tree1Input, tree2Input) {
+  const steps = [];
+  const t1Root = cloneTree(tree1Input);
+  const t2Root = cloneTree(tree2Input);
+
+  let stack = [];
+  let recursionNodes = [];
+  let callIdCounter = 0;
+  const statusMap1 = {};
+  const statusMap2 = {};
+
+  function check(p, q) {
+    const callId = `call_${++callIdCounter}`;
+    const pLabel = p ? `Node(${p.val})` : 'nullptr';
+    const qLabel = q ? `Node(${q.val})` : 'nullptr';
+
+    const frame = {
+      id: callId,
+      func: 'isSameTree',
+      args: { p: pLabel, q: qLabel },
+      line: 1,
+      returnVal: null,
+    };
+    stack.push(frame);
+
+    const recNode = {
+      id: callId,
+      label: `isSameTree(${pLabel}, ${qLabel})`,
+      parentId: stack.length > 1 ? stack[stack.length - 2].id : null,
+      status: 'active',
+      returnVal: null,
+    };
+    recursionNodes.push({ ...recNode });
+
+    const getSnapshot = () => [
+      {
+        id: 'tree1',
+        title: 'Tree 1 (p)',
+        theme: 'sky',
+        tree: snapshotTree(t1Root, { ...statusMap1, ...(p ? { [p.id]: { status: 'active', badge: 'p' } } : {}) }),
+      },
+      {
+        id: 'tree2',
+        title: 'Tree 2 (q)',
+        theme: 'purple',
+        tree: snapshotTree(t2Root, { ...statusMap2, ...(q ? { [q.id]: { status: 'active', badge: 'q' } } : {}) }),
+      },
+    ];
+
+    // Line 1: Entry
+    steps.push({
+      line: 1,
+      multiTrees: getSnapshot(),
+      activeNodeId: p?.id || q?.id || null,
+      highlightNodeIds: [p?.id, q?.id].filter(Boolean),
+      pointers: { p: pLabel, q: qLabel },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 1: Comparing nodes: isSameTree(p = ${pLabel}, q = ${qLabel}).`,
+      variables: { p: pLabel, q: qLabel },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    // Line 2: if (p == nullptr && q == nullptr) return true;
+    const bothNull = !p && !q;
+    steps.push({
+      line: 2,
+      multiTrees: getSnapshot(),
+      activeNodeId: null,
+      highlightNodeIds: [],
+      pointers: { p: pLabel, q: qLabel, 'p == nullptr && q == nullptr': bothNull ? 'true' : 'false' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: bothNull
+        ? 'Line 2: Base case HIT! Both p and q are nullptr (identical empty subtrees). Returning true.'
+        : `Line 2: 'p == nullptr && q == nullptr' is FALSE (p=${pLabel}, q=${qLabel}). Continuing check.`,
+      variables: { bothNull },
+      actionType: bothNull ? 'BASE_CASE' : 'CHECK',
+      output: [],
+    });
+
+    if (bothNull) {
+      frame.returnVal = true;
+      const rNode = recursionNodes.find((n) => n.id === callId);
+      if (rNode) { rNode.status = 'returned'; rNode.returnVal = true; }
+      stack.pop();
+      return true;
+    }
+
+    // Line 3: if (p == nullptr || q == nullptr) return false;
+    const oneNull = !p || !q;
+    steps.push({
+      line: 3,
+      multiTrees: getSnapshot(),
+      activeNodeId: p?.id || q?.id || null,
+      highlightNodeIds: [p?.id, q?.id].filter(Boolean),
+      pointers: { p: pLabel, q: qLabel, 'p == nullptr || q == nullptr': oneNull ? 'true (MISMATCH)' : 'false' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: oneNull
+        ? `Line 3: Structure Mismatch! One node is nullptr while the other is not (p=${pLabel}, q=${qLabel}). Returning false!`
+        : `Line 3: Both nodes exist. Structural symmetry holds so far.`,
+      variables: { structuralMismatch: oneNull },
+      actionType: oneNull ? 'MISMATCH' : 'CHECK',
+      output: [],
+    });
+
+    if (oneNull) {
+      if (p) statusMap1[p.id] = { status: 'deleted', badge: 'mismatch' };
+      if (q) statusMap2[q.id] = { status: 'deleted', badge: 'mismatch' };
+      frame.returnVal = false;
+      const rNode = recursionNodes.find((n) => n.id === callId);
+      if (rNode) { rNode.status = 'returned'; rNode.returnVal = false; }
+      stack.pop();
+      return false;
+    }
+
+    // Line 4: if (p->val != q->val) return false;
+    const valMismatch = p.val !== q.val;
+    steps.push({
+      line: 4,
+      multiTrees: getSnapshot(),
+      activeNodeId: p.id,
+      highlightNodeIds: [p.id, q.id],
+      pointers: {
+        'p->val': p.val,
+        'q->val': q.val,
+        'p->val == q->val': valMismatch ? `FALSE (${p.val} != ${q.val})` : `TRUE (${p.val} == ${q.val})`,
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: valMismatch
+        ? `Line 4: Value Mismatch! p->val (${p.val}) != q->val (${q.val}). Subtrees are NOT identical. Returning false.`
+        : `Line 4: Values MATCH! p->val (${p.val}) == q->val (${q.val}). Checking left and right subtrees.`,
+      variables: { 'p->val': p.val, 'q->val': q.val, matched: !valMismatch },
+      actionType: valMismatch ? 'MISMATCH' : 'MATCH',
+      output: [],
+    });
+
+    if (valMismatch) {
+      statusMap1[p.id] = { status: 'deleted', badge: 'val mismatch' };
+      statusMap2[q.id] = { status: 'deleted', badge: 'val mismatch' };
+      frame.returnVal = false;
+      const rNode = recursionNodes.find((n) => n.id === callId);
+      if (rNode) { rNode.status = 'returned'; rNode.returnVal = false; }
+      stack.pop();
+      return false;
+    }
+
+    statusMap1[p.id] = { status: 'visited', badge: 'match' };
+    statusMap2[q.id] = { status: 'visited', badge: 'match' };
+
+    // Line 6: Recurse Left
+    frame.line = 6;
+    steps.push({
+      line: 6,
+      multiTrees: getSnapshot(),
+      activeNodeId: p.id,
+      highlightNodeIds: [p.id, q.id],
+      pointers: { p: pLabel, q: qLabel, comparing: 'left subtrees' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 6: Recursing on left children: Calling isSameTree(p->left, q->left). Frame on Node(${p.val}) pauses.`,
+      variables: { branch: 'LEFT' },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    const leftSame = check(p.left, q.left);
+    if (!leftSame) {
+      frame.returnVal = false;
+      const rNode = recursionNodes.find((n) => n.id === callId);
+      if (rNode) { rNode.status = 'returned'; rNode.returnVal = false; }
+      stack.pop();
+      return false;
+    }
+
+    // Line 6: Recurse Right
+    frame.line = 6;
+    steps.push({
+      line: 6,
+      multiTrees: getSnapshot(),
+      activeNodeId: p.id,
+      highlightNodeIds: [p.id, q.id],
+      pointers: { p: pLabel, q: qLabel, comparing: 'right subtrees' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 6: Left subtrees are identical (TRUE). Now checking right children: Calling isSameTree(p->right, q->right).`,
+      variables: { leftSame: true, branch: 'RIGHT' },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    const rightSame = check(p.right, q.right);
+    const finalResult = leftSame && rightSame;
+
+    frame.returnVal = finalResult;
+    const rNode = recursionNodes.find((n) => n.id === callId);
+    if (rNode) { rNode.status = 'returned'; rNode.returnVal = finalResult; }
+
+    steps.push({
+      line: 6,
+      multiTrees: getSnapshot(),
+      activeNodeId: p.id,
+      highlightNodeIds: [p.id, q.id],
+      pointers: { returnVal: String(finalResult) },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 6: Result for subtree pair (Node(${p.val}), Node(${q.val})) = ${finalResult}. Returning up call stack.`,
+      variables: { returnVal: finalResult },
+      actionType: 'RETURN',
+      output: [finalResult],
+    });
+
+    stack.pop();
+    return finalResult;
+  }
+
+  const result = check(t1Root, t2Root);
+
+  steps.push({
+    line: 1,
+    multiTrees: [
+      {
+        id: 'tree1',
+        title: 'Tree 1 (p)',
+        theme: result ? 'emerald' : 'sky',
+        tree: snapshotTree(t1Root, statusMap1),
+      },
+      {
+        id: 'tree2',
+        title: 'Tree 2 (q)',
+        theme: result ? 'emerald' : 'purple',
+        tree: snapshotTree(t2Root, statusMap2),
+      },
+    ],
+    activeNodeId: null,
+    highlightNodeIds: [],
+    pointers: { result: result ? 'true (Identical)' : 'false (Different)' },
+    callStack: [],
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: `Same Tree verification complete! Result: ${result ? '✅ Both trees are IDENTICAL in structure and node values.' : '❌ Trees are NOT identical.'}`,
+    variables: { isSame: result, completed: true },
+    actionType: 'COMPLETE',
+    output: [result ? 'Result: true (Trees are identical)' : 'Result: false (Trees differ)'],
+  });
+
+  return steps;
+}
+
+/**
+ * LeetCode 572: Subtree of Another Tree
+ * bool isSubtree(TreeNode* root, TreeNode* subRoot)
+ */
+export function generateSubtreeSteps(tree1Input, tree2Input) {
+  const steps = [];
+  const mainRoot = cloneTree(tree1Input);
+  const subRoot = cloneTree(tree2Input);
+
+  let stack = [];
+  let recursionNodes = [];
+  let callIdCounter = 0;
+  const statusMap1 = {};
+  const statusMap2 = {};
+
+  function isSame(p, q) {
+    if (!p && !q) return true;
+    if (!p || !q) return false;
+    if (p.val !== q.val) return false;
+    return isSame(p.left, q.left) && isSame(p.right, q.right);
+  }
+
+  function traverse(node) {
+    if (!node) return false;
+    const callId = `call_${++callIdCounter}`;
+    const nLabel = `Node(${node.val})`;
+
+    const frame = {
+      id: callId,
+      func: 'isSubtree',
+      args: { root: nLabel, subRoot: subRoot ? `Node(${subRoot.val})` : 'nullptr' },
+      line: 1,
+      returnVal: null,
+    };
+    stack.push(frame);
+
+    const recNode = {
+      id: callId,
+      label: `isSubtree(${nLabel})`,
+      parentId: stack.length > 1 ? stack[stack.length - 2].id : null,
+      status: 'active',
+      returnVal: null,
+    };
+    recursionNodes.push({ ...recNode });
+
+    const getSnapshot = () => [
+      {
+        id: 'tree1',
+        title: 'Main Tree (root)',
+        theme: 'sky',
+        tree: snapshotTree(mainRoot, { ...statusMap1, [node.id]: { status: 'active', badge: 'candidate' } }),
+      },
+      {
+        id: 'tree2',
+        title: 'Target Subtree (subRoot)',
+        theme: 'purple',
+        tree: snapshotTree(subRoot, statusMap2),
+      },
+    ];
+
+    steps.push({
+      line: 1,
+      multiTrees: getSnapshot(),
+      activeNodeId: node.id,
+      highlightNodeIds: [node.id, subRoot?.id].filter(Boolean),
+      pointers: { currentCandidate: nLabel, targetSubtree: subRoot ? `Node(${subRoot.val})` : 'nullptr' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 1: Checking if subtree at Node(${node.val}) matches target subRoot.`,
+      variables: { currentCandidate: node.val },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    if (isSame(node, subRoot)) {
+      statusMap1[node.id] = { status: 'matched', badge: 'SUBTREE MATCH!' };
+      steps.push({
+        line: 4,
+        multiTrees: getSnapshot(),
+        activeNodeId: node.id,
+        highlightNodeIds: [node.id],
+        pointers: { matchFound: 'TRUE', root: nLabel },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `🎯 Line 4: MATCH FOUND! Subtree starting at Node(${node.val}) is structurally and value identical to subRoot.`,
+        variables: { match: true },
+        actionType: 'MATCH',
+        output: [true],
+      });
+      stack.pop();
+      return true;
+    }
+
+    const leftFound = traverse(node.left);
+    if (leftFound) {
+      stack.pop();
+      return true;
+    }
+
+    const rightFound = traverse(node.right);
+    stack.pop();
+    return rightFound;
+  }
+
+  const found = traverse(mainRoot);
+
+  steps.push({
+    line: 1,
+    multiTrees: [
+      {
+        id: 'tree1',
+        title: 'Main Tree (root)',
+        theme: found ? 'emerald' : 'sky',
+        tree: snapshotTree(mainRoot, statusMap1),
+      },
+      {
+        id: 'tree2',
+        title: 'Target Subtree (subRoot)',
+        theme: found ? 'emerald' : 'purple',
+        tree: snapshotTree(subRoot, statusMap2),
+      },
+    ],
+    activeNodeId: null,
+    highlightNodeIds: [],
+    pointers: { isSubtree: found ? 'true' : 'false' },
+    callStack: [],
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: `Subtree check completed! Result: ${found ? '✅ subRoot IS a valid subtree of the main tree.' : '❌ subRoot is NOT found in the main tree.'}`,
+    variables: { isSubtree: found, completed: true },
+    actionType: 'COMPLETE',
+    output: [found ? 'Result: true (subRoot exists in tree)' : 'Result: false (subRoot not found)'],
+  });
+
+  return steps;
+}
+
+/**
+ * Universal Multi-Tree Merger: Merges 2, 3, 4, or N Binary Trees simultaneously
+ * TreeNode* mergeNTrees(vector<TreeNode*>& trees) / mergeThreeTrees(t1, t2, t3)
+ */
+export function generateMergeMultiTreesSteps(treesInput) {
+  const inputList = Array.isArray(treesInput) ? treesInput : [treesInput];
+  const validTrees = inputList.map((t, idx) => ({
+    id: t?.treeId || t?.id || `tree_${idx + 1}`,
+    title: t?.title || `Tree ${idx + 1}${idx === 0 ? ' (Merged Target)' : ' (Source)'}`,
+    theme: t?.theme || ['sky', 'purple', 'emerald', 'amber', 'rose', 'indigo', 'teal'][idx % 7],
+    root: cloneTree(t?.tree || t?.root || t),
+  }));
+
+  const numTrees = validTrees.length;
+  if (numTrees === 0) return [];
+  if (numTrees === 2) {
+    return generateMergeTwoTreesSteps(validTrees[0].root, validTrees[1].root);
+  }
+
+  const steps = [];
+  let stack = [];
+  let recursionNodes = [];
+  let callIdCounter = 0;
+  const statusMaps = validTrees.map(() => ({}));
+
+  function getSnapshot() {
+    return validTrees.map((vt, idx) => ({
+      id: vt.id,
+      title: vt.title,
+      theme: vt.theme,
+      tree: snapshotTree(vt.root, statusMaps[idx]),
+    }));
+  }
+
+  function mergeN(currentNodes, parent1 = null, isLeft = true) {
+    const callId = `call_${++callIdCounter}`;
+    const nonNullNodes = currentNodes.filter(Boolean);
+
+    const frame = {
+      id: callId,
+      func: `merge${numTrees}Trees`,
+      args: Object.fromEntries(currentNodes.map((n, i) => [`t${i + 1}`, n ? `Node(${n.val})` : 'nullptr'])),
+      line: 1,
+      returnVal: null,
+    };
+    stack.push(frame);
+
+    const recNode = {
+      id: callId,
+      label: `merge(${currentNodes.map((n) => (n ? n.val : 'ø')).join(', ')})`,
+      parentId: stack.length > 1 ? stack[stack.length - 2].id : null,
+      status: 'active',
+      returnVal: null,
+    };
+    recursionNodes.push({ ...recNode });
+
+    // Step 1: Base Case check (all null)
+    if (nonNullNodes.length === 0) {
+      steps.push({
+        line: 2,
+        multiTrees: getSnapshot(),
+        activeNodeId: null,
+        highlightNodeIds: [],
+        pointers: Object.fromEntries(currentNodes.map((n, i) => [`root${i + 1}`, 'nullptr'])),
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 2: Base Case: All ${numTrees} tree nodes at this position are nullptr. Returning nullptr.`,
+        variables: { allNull: true },
+        actionType: 'BASE_CASE',
+        output: [],
+      });
+      frame.returnVal = 'nullptr';
+      recNode.status = 'returned';
+      recNode.returnVal = 'nullptr';
+      stack.pop();
+      return null;
+    }
+
+    // Target node is node1 if it exists, or first available non-null node cloned into parent1
+    let primaryNode = currentNodes[0];
+    if (!primaryNode) {
+      const firstAvailable = nonNullNodes[0];
+      const donorIdx = currentNodes.indexOf(firstAvailable);
+      const clonedDonor = cloneTree(firstAvailable);
+      if (parent1) {
+        if (isLeft) parent1.left = clonedDonor;
+        else parent1.right = clonedDonor;
+      }
+      validTrees[0].root = validTrees[0].root || clonedDonor;
+      primaryNode = clonedDonor;
+      currentNodes[0] = clonedDonor;
+
+      steps.push({
+        line: 3,
+        multiTrees: getSnapshot(),
+        activeNodeId: primaryNode.id,
+        highlightNodeIds: [primaryNode.id, firstAvailable.id],
+        pointers: {
+          splicedFrom: `Tree ${donorIdx + 1} (Node ${firstAvailable.val})`,
+          target: `Tree 1 (Spliced)`,
+        },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 3: Tree 1 node is nullptr. Splicing non-null subtree from Tree ${donorIdx + 1} (Node ${firstAvailable.val}) directly into Tree 1.`,
+        variables: { spliced: true, sourceTree: donorIdx + 1 },
+        actionType: 'SPLICE',
+        output: [],
+      });
+    }
+
+    // Step 2: Sum values across all non-null nodes
+    const values = currentNodes.map((n) => (n ? n.val : 0));
+    const sumVal = values.reduce((a, b) => a + b, 0);
+    const sumExpr = currentNodes
+      .map((n, i) => (n ? `${n.val} [T${i + 1}]` : null))
+      .filter(Boolean)
+      .join(' + ');
+
+    primaryNode.val = sumVal;
+
+    // Mark statuses
+    currentNodes.forEach((n, idx) => {
+      if (n) {
+        statusMaps[idx][n.id] = {
+          status: idx === 0 ? 'created' : 'matched',
+          badge: idx === 0 ? `sum=${sumVal}` : `val=${n.val}`,
+        };
+      }
+    });
+
+    steps.push({
+      line: 5,
+      multiTrees: getSnapshot(),
+      activeNodeId: primaryNode.id,
+      highlightNodeIds: nonNullNodes.map((n) => n.id),
+      pointers: {
+        'Summed Value': `${sumExpr} = ${sumVal}`,
+        ...Object.fromEntries(currentNodes.map((n, i) => [`root${i + 1}`, n ? `Node(${n.val})` : 'nullptr'])),
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 5: In-place Multi-Tree Merge: Summing values across all ${numTrees} trees: ${sumExpr} = ${sumVal}. Stored into Tree 1 Node.`,
+      variables: { sum: sumVal, formula: sumExpr },
+      actionType: 'VALUE_UPDATE',
+      output: [],
+    });
+
+    // Step 3: Recurse left
+    frame.line = 6;
+    steps.push({
+      line: 6,
+      multiTrees: getSnapshot(),
+      activeNodeId: primaryNode.id,
+      highlightNodeIds: [primaryNode.id],
+      pointers: {
+        branch: 'LEFT SUBTREES',
+        ...Object.fromEntries(currentNodes.map((n, i) => [`t${i + 1}->left`, n?.left ? `Node(${n.left.val})` : 'nullptr'])),
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 6: Recursing on LEFT subtrees across all ${numTrees} trees simultaneously.`,
+      variables: { branch: 'LEFT' },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    const leftChildren = currentNodes.map((n) => (n ? n.left : null));
+    mergeN(leftChildren, primaryNode, true);
+
+    // Step 4: Recurse right
+    frame.line = 7;
+    steps.push({
+      line: 7,
+      multiTrees: getSnapshot(),
+      activeNodeId: primaryNode.id,
+      highlightNodeIds: [primaryNode.id],
+      pointers: {
+        branch: 'RIGHT SUBTREES',
+        ...Object.fromEntries(currentNodes.map((n, i) => [`t${i + 1}->right`, n?.right ? `Node(${n.right.val})` : 'nullptr'])),
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 7: Recursing on RIGHT subtrees across all ${numTrees} trees simultaneously.`,
+      variables: { branch: 'RIGHT' },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    const rightChildren = currentNodes.map((n) => (n ? n.right : null));
+    mergeN(rightChildren, primaryNode, false);
+
+    // Step 5: Return
+    frame.line = 9;
+    frame.returnVal = `Node(${primaryNode.val})`;
+    const rNode = recursionNodes.find((n) => n.id === callId);
+    if (rNode) {
+      rNode.status = 'returned';
+      rNode.returnVal = `Node(${primaryNode.val})`;
+    }
+
+    steps.push({
+      line: 9,
+      multiTrees: getSnapshot(),
+      activeNodeId: primaryNode.id,
+      highlightNodeIds: [primaryNode.id],
+      pointers: { returnVal: `Node(${primaryNode.val})` },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 9: Returning merged subtree root Node(${primaryNode.val}) up call stack.`,
+      variables: { returnVal: primaryNode.val },
+      actionType: 'RETURN',
+      output: [],
+    });
+
+    stack.pop();
+    return primaryNode;
+  }
+
+  const initialNodes = validTrees.map((vt) => vt.root);
+  mergeN(initialNodes);
+
+  steps.push({
+    line: 9,
+    multiTrees: validTrees.map((vt, idx) => ({
+      id: vt.id,
+      title: vt.title,
+      theme: idx === 0 ? 'emerald' : vt.theme,
+      tree: snapshotTree(vt.root, statusMaps[idx]),
+    })),
+    activeNodeId: null,
+    highlightNodeIds: [],
+    pointers: {
+      status: 'Multi-Tree Merge Complete',
+      output: `All ${numTrees} trees merged successfully into Tree 1`,
+    },
+    callStack: [],
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: `✅ Multi-Tree Merge Complete! All ${numTrees} trees have been merged into Tree 1 with values summed and subtrees spliced.`,
+    variables: { completed: true, numTreesMerged: numTrees },
+    actionType: 'COMPLETE',
+    output: [`Merged ${numTrees} trees successfully`],
+  });
+
+  return steps;
+}
+
+/**
+ * Universal Multi-Tree Equivalence Check: Checks if 2, 3, 4, or N trees are identical
+ * bool isSameNTrees(vector<TreeNode*>& trees) / isSameThreeTrees(t1, t2, t3)
+ */
+export function generateSameMultiTreesSteps(treesInput) {
+  const inputList = Array.isArray(treesInput) ? treesInput : [treesInput];
+  const validTrees = inputList.map((t, idx) => ({
+    id: t?.treeId || t?.id || `tree_${idx + 1}`,
+    title: t?.title || `Tree ${idx + 1}`,
+    theme: t?.theme || ['sky', 'purple', 'emerald', 'amber', 'rose', 'indigo', 'teal'][idx % 7],
+    root: cloneTree(t?.tree || t?.root || t),
+  }));
+
+  const numTrees = validTrees.length;
+  if (numTrees <= 1) return [];
+  if (numTrees === 2) {
+    return generateSameTreeSteps(validTrees[0].root, validTrees[1].root);
+  }
+
+  const steps = [];
+  let stack = [];
+  let recursionNodes = [];
+  let callIdCounter = 0;
+  const statusMaps = validTrees.map(() => ({}));
+
+  function getSnapshot() {
+    return validTrees.map((vt, idx) => ({
+      id: vt.id,
+      title: vt.title,
+      theme: vt.theme,
+      tree: snapshotTree(vt.root, statusMaps[idx]),
+    }));
+  }
+
+  function checkSameN(currentNodes) {
+    const callId = `call_${++callIdCounter}`;
+    const nonNullNodes = currentNodes.filter(Boolean);
+    const allNull = nonNullNodes.length === 0;
+    const allNonNull = nonNullNodes.length === numTrees;
+
+    const frame = {
+      id: callId,
+      func: `isSame${numTrees}Trees`,
+      args: Object.fromEntries(currentNodes.map((n, i) => [`t${i + 1}`, n ? `Node(${n.val})` : 'nullptr'])),
+      line: 1,
+      returnVal: null,
+    };
+    stack.push(frame);
+
+    const recNode = {
+      id: callId,
+      label: `isSame(${currentNodes.map((n) => (n ? n.val : 'ø')).join(', ')})`,
+      parentId: stack.length > 1 ? stack[stack.length - 2].id : null,
+      status: 'active',
+      returnVal: null,
+    };
+    recursionNodes.push({ ...recNode });
+
+    // Step 1: Base case (all nullptr)
+    if (allNull) {
+      steps.push({
+        line: 2,
+        multiTrees: getSnapshot(),
+        activeNodeId: null,
+        highlightNodeIds: [],
+        pointers: Object.fromEntries(currentNodes.map((n, i) => [`root${i + 1}`, 'nullptr'])),
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 2: Base Case: All ${numTrees} nodes are nullptr (identical empty subtrees). Returning true.`,
+        variables: { allNull: true, result: true },
+        actionType: 'BASE_CASE',
+        output: [],
+      });
+      frame.returnVal = 'true';
+      recNode.status = 'returned';
+      recNode.returnVal = 'true';
+      stack.pop();
+      return true;
+    }
+
+    // Step 2: Structural mismatch (some null, some non-null)
+    if (!allNonNull) {
+      currentNodes.forEach((n, idx) => {
+        if (n) statusMaps[idx][n.id] = { status: 'deleted', badge: 'MISMATCH' };
+      });
+
+      steps.push({
+        line: 3,
+        multiTrees: getSnapshot(),
+        activeNodeId: nonNullNodes[0]?.id || null,
+        highlightNodeIds: nonNullNodes.map((n) => n.id),
+        pointers: {
+          mismatch: `Structural disparity across trees`,
+          ...Object.fromEntries(currentNodes.map((n, i) => [`root${i + 1}`, n ? `Node(${n.val})` : 'nullptr'])),
+        },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 3: ❌ Structural Mismatch: Some trees have nodes while others are nullptr at this position. Trees are NOT identical! Returning false.`,
+        variables: { structuralMismatch: true, result: false },
+        actionType: 'MISMATCH',
+        output: [false],
+      });
+      frame.returnVal = 'false';
+      recNode.status = 'returned';
+      recNode.returnVal = 'false';
+      stack.pop();
+      return false;
+    }
+
+    // Step 3: Value comparison across all nodes
+    const firstVal = currentNodes[0].val;
+    const allValuesEqual = currentNodes.every((n) => n.val === firstVal);
+
+    if (!allValuesEqual) {
+      currentNodes.forEach((n, idx) => {
+        statusMaps[idx][n.id] = { status: 'deleted', badge: `val=${n.val}` };
+      });
+
+      const valList = currentNodes.map((n, i) => `T${i + 1}: ${n.val}`).join(', ');
+      steps.push({
+        line: 4,
+        multiTrees: getSnapshot(),
+        activeNodeId: currentNodes[0].id,
+        highlightNodeIds: currentNodes.map((n) => n.id),
+        pointers: {
+          valueMismatch: valList,
+          ...Object.fromEntries(currentNodes.map((n, i) => [`root${i + 1}`, `Node(${n.val})`])),
+        },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 4: ❌ Value Mismatch across trees: [${valList}]. Node values differ. Returning false.`,
+        variables: { valueMismatch: true, result: false },
+        actionType: 'MISMATCH',
+        output: [false],
+      });
+      frame.returnVal = 'false';
+      recNode.status = 'returned';
+      recNode.returnVal = 'false';
+      stack.pop();
+      return false;
+    }
+
+    // Values MATCH
+    currentNodes.forEach((n, idx) => {
+      statusMaps[idx][n.id] = { status: 'visited', badge: 'MATCH' };
+    });
+
+    steps.push({
+      line: 4,
+      multiTrees: getSnapshot(),
+      activeNodeId: currentNodes[0].id,
+      highlightNodeIds: currentNodes.map((n) => n.id),
+      pointers: {
+        allMatch: `val = ${firstVal} in all ${numTrees} trees`,
+        ...Object.fromEntries(currentNodes.map((n, i) => [`root${i + 1}`, `Node(${n.val})`])),
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 4: ✅ Values MATCH (val = ${firstVal}) across all ${numTrees} trees! Now checking left & right subtrees.`,
+      variables: { matchedVal: firstVal },
+      actionType: 'MATCH',
+      output: [],
+    });
+
+    // Step 4: Recurse left
+    frame.line = 6;
+    steps.push({
+      line: 6,
+      multiTrees: getSnapshot(),
+      activeNodeId: currentNodes[0].id,
+      highlightNodeIds: currentNodes.map((n) => n.id),
+      pointers: {
+        comparing: 'LEFT SUBTREES',
+        ...Object.fromEntries(currentNodes.map((n, i) => [`t${i + 1}->left`, n.left ? `Node(${n.left.val})` : 'nullptr'])),
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 6: Checking left children: Calling isSameNTrees for left subtrees across all ${numTrees} trees.`,
+      variables: { branch: 'LEFT' },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    const leftChildren = currentNodes.map((n) => n.left);
+    const leftRes = checkSameN(leftChildren);
+
+    if (!leftRes) {
+      frame.returnVal = 'false';
+      recNode.status = 'returned';
+      recNode.returnVal = 'false';
+      stack.pop();
+      return false;
+    }
+
+    // Step 5: Recurse right
+    frame.line = 7;
+    steps.push({
+      line: 7,
+      multiTrees: getSnapshot(),
+      activeNodeId: currentNodes[0].id,
+      highlightNodeIds: currentNodes.map((n) => n.id),
+      pointers: {
+        comparing: 'RIGHT SUBTREES',
+        ...Object.fromEntries(currentNodes.map((n, i) => [`t${i + 1}->right`, n.right ? `Node(${n.right.val})` : 'nullptr'])),
+      },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 7: Left subtrees identical (TRUE). Now checking right children across all ${numTrees} trees.`,
+      variables: { branch: 'RIGHT' },
+      actionType: 'CALL',
+      output: [],
+    });
+
+    const rightChildren = currentNodes.map((n) => n.right);
+    const rightRes = checkSameN(rightChildren);
+
+    const overallRes = leftRes && rightRes;
+    frame.returnVal = overallRes ? 'true' : 'false';
+    recNode.status = 'returned';
+    recNode.returnVal = overallRes ? 'true' : 'false';
+
+    steps.push({
+      line: 8,
+      multiTrees: getSnapshot(),
+      activeNodeId: currentNodes[0].id,
+      highlightNodeIds: currentNodes.map((n) => n.id),
+      pointers: { returnVal: overallRes ? 'true' : 'false' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 8: Subtree comparison at this level returned ${overallRes ? 'TRUE' : 'FALSE'}.`,
+      variables: { returnVal: overallRes },
+      actionType: 'RETURN',
+      output: [],
+    });
+
+    stack.pop();
+    return overallRes;
+  }
+
+  const initialNodes = validTrees.map((vt) => vt.root);
+  const result = checkSameN(initialNodes);
+
+  steps.push({
+    line: 1,
+    multiTrees: validTrees.map((vt, idx) => ({
+      id: vt.id,
+      title: vt.title,
+      theme: result ? 'emerald' : vt.theme,
+      tree: snapshotTree(vt.root, statusMaps[idx]),
+    })),
+    activeNodeId: null,
+    highlightNodeIds: [],
+    pointers: { result: result ? `true (All ${numTrees} Trees Identical)` : 'false (Trees Differ)' },
+    callStack: [],
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: `Same Multi-Tree verification complete! Result: ${
+      result
+        ? `✅ All ${numTrees} trees are IDENTICAL in structure and node values.`
+        : '❌ Trees have structural or value differences.'
+    }`,
+    variables: { isSame: result, completed: true, numTrees },
+    actionType: 'COMPLETE',
+    output: [result ? `Result: true (All ${numTrees} trees are identical)` : 'Result: false (Trees differ)'],
+  });
+
+  return steps;
+}
+

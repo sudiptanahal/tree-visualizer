@@ -13,6 +13,7 @@ import { ALGORITHMS, ALGORITHM_CATEGORIES } from '../data/algorithmsData';
 
 export default function Navbar({
   selectedAlgoId,
+  currentAlgo: currentAlgoProp,
   onSelectAlgo,
   algoParams,
   onChangeParam,
@@ -24,7 +25,7 @@ export default function Navbar({
   onRebuildSteps,
   isCustomCodeActive = false,
 }) {
-  const currentAlgo = ALGORITHMS[selectedAlgoId] || ALGORITHMS['bst_insert'];
+  const currentAlgo = currentAlgoProp || ALGORITHMS[selectedAlgoId] || ALGORITHMS['bst_insert'];
   const isGraph = currentAlgo.category === 'graph';
   const isRecursionOnly = currentAlgo.category === 'recursion';
 
@@ -80,9 +81,12 @@ export default function Navbar({
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* Dynamic Parameters Inputs */}
-          {!isCustomCodeActive && currentAlgo.paramConfigs && currentAlgo.paramConfigs.length > 0 && (
-            <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800">
+          {/* Dynamic Parameters Inputs (for built-in and custom code) */}
+          {currentAlgo.paramConfigs && currentAlgo.paramConfigs.length > 0 && (
+            <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-800 shadow-md">
+              <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider font-mono">
+                Params:
+              </span>
               {currentAlgo.paramConfigs.map((cfg) => (
                 <div key={cfg.name} className="flex items-center gap-1.5 text-xs">
                   <span className="text-slate-400 font-mono text-[11px]">{cfg.label}:</span>
@@ -92,16 +96,16 @@ export default function Navbar({
                     max={cfg.max}
                     value={algoParams[cfg.name] !== undefined ? algoParams[cfg.name] : cfg.default}
                     onChange={(e) => onChangeParam(cfg.name, Number(e.target.value))}
-                    className="w-14 bg-slate-950 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-sky-400 text-center focus:outline-none focus:border-sky-500"
+                    className="w-14 bg-slate-950 border border-slate-700 rounded-lg px-2 py-0.5 text-xs font-mono font-bold text-sky-400 text-center focus:outline-none focus:border-sky-500 shadow-inner"
                   />
                 </div>
               ))}
               <button
                 onClick={onRebuildSteps}
-                className="px-2 py-0.5 bg-sky-600/30 hover:bg-sky-600/60 text-sky-300 text-[11px] font-bold rounded border border-sky-500/30 transition-colors"
-                title="Apply parameter changes"
+                className="px-2.5 py-1 bg-sky-600/40 hover:bg-sky-600 text-sky-200 text-[11px] font-bold rounded-lg border border-sky-500/40 transition-colors shadow-sm"
+                title="Apply parameter changes and re-run"
               >
-                Apply
+                Run
               </button>
             </div>
           )}

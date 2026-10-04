@@ -1753,7 +1753,7 @@ export function generateInvertTreeSteps(initialTree) {
   return steps;
 }
 
-// Export remaining helpers
+// Export remaining helpers and Multi-Tree Operations
 export {
   generateBstSearchSteps,
   generateValidateBstSteps,
@@ -1764,4 +1764,11 @@ export {
   generateDiameterSteps,
   generateBalancedTreeSteps,
   generateSymmetricTreeSteps,
+  generateFlattenTreeSteps,
+  generateMergeTwoTreesSteps,
+  generateSameTreeSteps,
+  generateSubtreeSteps,
+  generateMergeMultiTreesSteps,
+  generateSameMultiTreesSteps,
 } from './treeAlgorithmsExtra';
+

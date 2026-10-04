@@ -15,6 +15,16 @@ export default function VariablesInspector({ variables = {}, pointers = {}, acti
     return true;
   });
 
+  const formatOutputItem = (item) => {
+    if (item === null || item === undefined) return 'null';
+    if (typeof item === 'object') {
+      if (item.val !== undefined) return `Node(${item.val})`;
+      if (Array.isArray(item)) return `[${item.join(', ')}]`;
+      return JSON.stringify(item);
+    }
+    return String(item);
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-950/90 rounded-xl border border-slate-800/80 overflow-hidden shadow-2xl">
       {/* Header */}
@@ -90,7 +100,7 @@ export default function VariablesInspector({ variables = {}, pointers = {}, acti
             </span>
           </div>
           <div className="bg-slate-950 px-2 py-1 rounded border border-slate-800 font-mono text-xs text-amber-300 overflow-x-auto whitespace-nowrap">
-            [{Array.isArray(output[0]) ? output.map(lvl => `[${lvl.join(',')}]`).join(', ') : output.join(', ')}]
+            {output.map(formatOutputItem).join(', ')}
           </div>
         </div>
       )}

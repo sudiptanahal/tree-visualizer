@@ -563,49 +563,228 @@ function generateRightSideViewSteps(treeState, cppCode) {
 }
 
 // 5. FLATTEN BINARY TREE TO LINKED LIST
-function generateFlattenSteps(treeState, cppCode) {
+function generateFlattenSteps(initialTreeState, cppCode) {
   const steps = [];
+  const treeState = cloneTree(initialTreeState);
   let curr = treeState;
 
+  const stack = [
+    { id: 'frame_1', func: 'flatten', args: { root: curr ? `Node(${curr.val})` : 'nullptr' }, line: 2, returnVal: null }
+  ];
+
+  const recursionNodes = [
+    { id: 'call_1', label: `flatten(${curr ? `Node(${curr.val})` : 'nullptr'})`, parentId: null, status: 'active', returnVal: null }
+  ];
+
+  // Step 1: Entry
   steps.push({
     line: 1,
-    tree: snapshotTree(treeState),
+    tree: snapshotTree(treeState, curr ? { [curr.id]: { status: 'active', badge: 'root' } } : {}),
     activeNodeId: curr ? curr.id : null,
     highlightNodeIds: curr ? [curr.id] : [],
-    pointers: { curr: curr ? `Node(${curr.val})` : 'nullptr' },
-    callStack: [{ id: 'main', func: 'flatten', args: {}, line: 1 }],
-    recursionTree: [],
-    explanation: `Line 1: Starting in-place tree flattening (Morris-like traversal).`,
-    variables: {},
+    pointers: { root: curr ? `Node(${curr.val})` : 'nullptr', curr: curr ? `Node(${curr.val})` : 'nullptr' },
+    callStack: JSON.parse(JSON.stringify(stack)),
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: 'Line 1: Entering flatten(root). Starting in-place binary tree flattening into a linked list.',
+    variables: { curr: curr ? curr.val : 'nullptr' },
     actionType: 'CALL',
     output: [],
   });
 
+  // Step 2: TreeNode* curr = root;
+  steps.push({
+    line: 2,
+    tree: snapshotTree(treeState, curr ? { [curr.id]: { status: 'active', badge: 'curr' } } : {}),
+    activeNodeId: curr ? curr.id : null,
+    highlightNodeIds: curr ? [curr.id] : [],
+    pointers: { curr: curr ? `Node(${curr.val})` : 'nullptr' },
+    callStack: JSON.parse(JSON.stringify(stack)),
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: `Line 2: Initializing pointer: TreeNode* curr = root (pointing to Node(${curr ? curr.val : 'nullptr'})).`,
+    variables: { curr: curr ? curr.val : 'nullptr' },
+    actionType: 'POINTER_UPDATE',
+    output: [],
+  });
+
   while (curr) {
+    stack[0].line = 3;
+    steps.push({
+      line: 3,
+      tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' } }),
+      activeNodeId: curr.id,
+      highlightNodeIds: [curr.id],
+      pointers: { curr: `Node(${curr.val})` },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 3: Loop condition check: curr is Node(${curr.val}) != nullptr (TRUE).`,
+      variables: { curr: curr.val, hasLeft: Boolean(curr.left) },
+      actionType: 'CHECK',
+      output: [],
+    });
+
+    stack[0].line = 4;
     if (curr.left) {
-      let prev = curr.left;
-      while (prev.right) prev = prev.right;
-
-      prev.right = curr.right;
-      curr.right = curr.left;
-      curr.left = null;
-
       steps.push({
-        line: 8,
-        tree: snapshotTree(treeState, { [curr.id]: { status: 'created' } }),
+        line: 4,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' }, [curr.left.id]: { status: 'highlight', badge: 'left' } }),
         activeNodeId: curr.id,
-        highlightNodeIds: [curr.id],
-        pointers: { curr: `Node(${curr.val})`, 'rewired right': `Node(${curr.right.val})` },
-        callStack: [{ id: 'main', func: 'flatten', args: {}, line: 8 }],
-        recursionTree: [],
-        explanation: `Rewired subtree at Node(${curr.val}): Left child moved to right, predecessor connected to old right.`,
-        variables: { curr: curr.val },
+        highlightNodeIds: [curr.id, curr.left.id],
+        pointers: { curr: `Node(${curr.val})`, 'curr->left': `Node(${curr.left.val})` },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 4: curr->left is NOT nullptr (points to Node(${curr.left.val})). Left subtree needs flattening.`,
+        variables: { curr: curr.val, 'curr->left': curr.left.val },
+        actionType: 'CHECK',
+        output: [],
+      });
+
+      let prev = curr.left;
+      stack[0].line = 6;
+      steps.push({
+        line: 6,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' }, [prev.id]: { status: 'matched', badge: 'prev' } }),
+        activeNodeId: prev.id,
+        highlightNodeIds: [curr.id, prev.id],
+        pointers: { curr: `Node(${curr.val})`, prev: `Node(${prev.val})` },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 6: Initializing predecessor search: TreeNode* prev = curr->left (Node(${prev.val})).`,
+        variables: { curr: curr.val, prev: prev.val },
         actionType: 'POINTER_UPDATE',
         output: [],
       });
+
+      while (prev.right) {
+        prev = prev.right;
+        stack[0].line = 8;
+        steps.push({
+          line: 8,
+          tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' }, [prev.id]: { status: 'matched', badge: 'prev' } }),
+          activeNodeId: prev.id,
+          highlightNodeIds: [curr.id, prev.id],
+          pointers: { curr: `Node(${curr.val})`, prev: `Node(${prev.val}) [traversing]` },
+          callStack: JSON.parse(JSON.stringify(stack)),
+          recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+          explanation: `Line 8: Traversing to rightmost node of left subtree: prev = prev->right (Node(${prev.val})).`,
+          variables: { prev: prev.val },
+          actionType: 'POINTER_UPDATE',
+          output: [],
+        });
+      }
+
+      // 1. Splice: prev->right = curr->right;
+      const oldCurrRight = curr.right;
+      prev.right = curr.right;
+      stack[0].line = 12;
+      steps.push({
+        line: 12,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'active', badge: 'curr' }, [prev.id]: { status: 'created', badge: 'prev->right' } }),
+        activeNodeId: prev.id,
+        highlightNodeIds: [curr.id, prev.id],
+        pointers: {
+          curr: `Node(${curr.val})`,
+          prev: `Node(${prev.val})`,
+          'prev->right': prev.right ? `Node(${prev.right.val})` : 'nullptr',
+        },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 12: Splicing: Connected prev->right (Node(${prev.val})) to curr->right (${oldCurrRight ? `Node(${oldCurrRight.val})` : 'nullptr'}).`,
+        variables: { prev: prev.val, 'prev->right': prev.right ? prev.right.val : null },
+        actionType: 'POINTER_UPDATE',
+        output: [],
+      });
+
+      // 2. Move left to right: curr->right = curr->left;
+      curr.right = curr.left;
+      stack[0].line = 14;
+      steps.push({
+        line: 14,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'created', badge: 'curr->right' } }),
+        activeNodeId: curr.id,
+        highlightNodeIds: [curr.id],
+        pointers: {
+          curr: `Node(${curr.val})`,
+          'curr->right': `Node(${curr.right.val})`,
+        },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 14: Moving left subtree to right: curr->right = curr->left (Node(${curr.right.val})).`,
+        variables: { curr: curr.val, 'curr->right': curr.right.val },
+        actionType: 'POINTER_UPDATE',
+        output: [],
+      });
+
+      // 3. Nullify left: curr->left = nullptr;
+      curr.left = null;
+      stack[0].line = 16;
+      steps.push({
+        line: 16,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'visited', badge: 'curr' } }),
+        activeNodeId: curr.id,
+        highlightNodeIds: [curr.id],
+        pointers: {
+          curr: `Node(${curr.val})`,
+          'curr->left': 'nullptr',
+          'curr->right': `Node(${curr.right.val})`,
+        },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 16: Set curr->left = nullptr. Left branch disconnected; subtree is now part of the right chain.`,
+        variables: { curr: curr.val, 'curr->left': null },
+        actionType: 'POINTER_UPDATE',
+        output: [],
+      });
+    } else {
+      steps.push({
+        line: 4,
+        tree: snapshotTree(treeState, { [curr.id]: { status: 'visited', badge: 'curr' } }),
+        activeNodeId: curr.id,
+        highlightNodeIds: [curr.id],
+        pointers: { curr: `Node(${curr.val})`, 'curr->left': 'nullptr' },
+        callStack: JSON.parse(JSON.stringify(stack)),
+        recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+        explanation: `Line 4: curr->left is nullptr on Node(${curr.val}). No left subtree to rewire.`,
+        variables: { curr: curr.val },
+        actionType: 'CHECK',
+        output: [],
+      });
     }
+
     curr = curr.right;
+    stack[0].line = 19;
+    steps.push({
+      line: 19,
+      tree: snapshotTree(treeState, curr ? { [curr.id]: { status: 'active', badge: 'curr' } } : {}),
+      activeNodeId: curr ? curr.id : null,
+      highlightNodeIds: curr ? [curr.id] : [],
+      pointers: { curr: curr ? `Node(${curr.val})` : 'nullptr' },
+      callStack: JSON.parse(JSON.stringify(stack)),
+      recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+      explanation: `Line 19: Advancing curr: curr = curr->right (${curr ? `Node(${curr.val})` : 'nullptr'}).`,
+      variables: { curr: curr ? curr.val : 'nullptr' },
+      actionType: 'POINTER_UPDATE',
+      output: [],
+    });
   }
+
+  // Final Step: Complete
+  stack[0].line = 21;
+  stack[0].returnVal = 'void';
+  recursionNodes[0].status = 'returned';
+
+  steps.push({
+    line: 21,
+    tree: snapshotTree(treeState),
+    activeNodeId: null,
+    highlightNodeIds: [],
+    pointers: { status: 'Flattening Complete', result: 'Right-Skewed Linked List' },
+    callStack: [],
+    recursionTree: JSON.parse(JSON.stringify(recursionNodes)),
+    explanation: 'Line 21: Flatten algorithm complete! All nodes are chained linearly along right pointers (1 -> 2 -> 3 -> 4 -> 5 -> 6) matching pre-order traversal.',
+    variables: { completed: true },
+    actionType: 'COMPLETE',
+    output: ['Flattened Linked List: 1 -> 2 -> 3 -> 4 -> 5 -> 6'],
+  });
 
   return steps;
 }

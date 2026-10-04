@@ -1,6 +1,7 @@
 // Metadata, C++ source code templates, complexities, and presets for all algorithms
 
 export const ALGORITHM_CATEGORIES = [
+  { id: 'multi_tree', name: 'Multi-Tree Operations (2+ Trees)' },
   { id: 'bst', name: 'Binary Search Tree (BST)' },
   { id: 'traversals', name: 'Tree Traversals' },
   { id: 'tree_dsa', name: 'Classic Tree DSA' },
@@ -9,6 +10,167 @@ export const ALGORITHM_CATEGORIES = [
 ];
 
 export const ALGORITHMS = {
+  // ================= MULTI-TREE OPERATIONS =================
+  'merge_two_trees': {
+    id: 'merge_two_trees',
+    name: 'Merge Two Binary Trees (LeetCode 617)',
+    category: 'multi_tree',
+    subtitle: 'Sum overlapping node values and splice subtrees in-place',
+    difficulty: 'Easy',
+    timeComplexity: 'O(min(N, M))',
+    spaceComplexity: 'O(min(H1, H2)) call stack frames',
+    multiTree: true,
+    defaultTree: [1, 3, 2, 5],
+    defaultTree2: [2, 1, 3, null, 4, null, 7],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Traverses both trees simultaneously. If both nodes exist, sums their values (root1->val += root2->val). If one node is null, returns the other node pointer to splice the entire subtree.',
+    cppCode: `TreeNode* mergeTrees(TreeNode* root1, TreeNode* root2) {
+    // 1. If one node is null, return the other
+    if (root1 == nullptr) return root2;
+    if (root2 == nullptr) return root1;
+    
+    // 2. Sum overlapping node values in-place
+    root1->val += root2->val;
+    
+    // 3. Recursively merge left and right child subtrees
+    root1->left = mergeTrees(root1->left, root2->left);
+    root1->right = mergeTrees(root1->right, root2->right);
+    
+    return root1;
+}`
+  },
+
+  'same_tree': {
+    id: 'same_tree',
+    name: 'Same Tree / Identical Check (LeetCode 100)',
+    category: 'multi_tree',
+    subtitle: 'Simultaneous structural and value equality verification',
+    difficulty: 'Easy',
+    timeComplexity: 'O(min(N, M))',
+    spaceComplexity: 'O(min(H1, H2)) call stack frames',
+    multiTree: true,
+    defaultTree: [1, 2, 3],
+    defaultTree2: [1, 2, 3],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Two binary trees are considered identical if they are structurally identical and have the exact same node values at every position.',
+    cppCode: `bool isSameTree(TreeNode* p, TreeNode* q) {
+    // 1. Both empty -> identical
+    if (p == nullptr && q == nullptr) return true;
+    
+    // 2. Structural mismatch -> not identical
+    if (p == nullptr || q == nullptr) return false;
+    
+    // 3. Value mismatch -> not identical
+    if (p->val != q->val) return false;
+    
+    // 4. Recursively check both left and right subtrees
+    return isSameTree(p->left, q->left) && isSameTree(p->right, q->right);
+}`
+  },
+
+  'subtree_of_tree': {
+    id: 'subtree_of_tree',
+    name: 'Subtree of Another Tree (LeetCode 572)',
+    category: 'multi_tree',
+    subtitle: 'Check if subRoot matches any subtree topology in root',
+    difficulty: 'Easy',
+    timeComplexity: 'O(N * M)',
+    spaceComplexity: 'O(H) call stack frames',
+    multiTree: true,
+    defaultTree: [3, 4, 5, 1, 2],
+    defaultTree2: [4, 1, 2],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Traverses the main tree. For each candidate node, invokes an identical tree comparator to check if the subtree matches subRoot completely.',
+    cppCode: `bool isSame(TreeNode* p, TreeNode* q) {
+    if (!p && !q) return true;
+    if (!p || !q || p->val != q->val) return false;
+    return isSame(p->left, q->left) && isSame(p->right, q->right);
+}
+
+bool isSubtree(TreeNode* root, TreeNode* subRoot) {
+    if (root == nullptr) return false;
+    if (isSame(root, subRoot)) return true;
+    
+    // Search in left or right subtrees
+    return isSubtree(root->left, subRoot) || isSubtree(root->right, subRoot);
+}`
+  },
+
+  'merge_three_trees': {
+    id: 'merge_three_trees',
+    name: 'Merge 3 Binary Trees (Multi-Tree)',
+    category: 'multi_tree',
+    subtitle: 'Simultaneously sum 3 trees and splice subtrees across all 3 inputs',
+    difficulty: 'Medium',
+    timeComplexity: 'O(N1 + N2 + N3)',
+    spaceComplexity: 'O(max(H1, H2, H3)) call stack frames',
+    multiTree: true,
+    defaultMultiTrees: [
+      { id: 't1', title: 'Tree 1 (Alpha - Target)', theme: 'sky', data: [1, 3, 2, 5] },
+      { id: 't2', title: 'Tree 2 (Beta - Source)', theme: 'purple', data: [2, 1, 3, null, 4, null, 7] },
+      { id: 't3', title: 'Tree 3 (Gamma - Source)', theme: 'emerald', data: [3, null, 2, null, null, 1, 6] },
+    ],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Traverses 3 binary trees simultaneously in parallel. Sums overlapping node values (t1->val += t2->val + t3->val) and splices non-null subtrees from donor trees into the target tree.',
+    cppCode: `TreeNode* mergeThreeTrees(TreeNode* t1, TreeNode* t2, TreeNode* t3) {
+    // 1. If all 3 nodes are nullptr, return nullptr
+    if (!t1 && !t2 && !t3) return nullptr;
+    
+    // 2. Compute summed value of all present nodes
+    int sum = (t1 ? t1->val : 0) + (t2 ? t2->val : 0) + (t3 ? t3->val : 0);
+    TreeNode* target = t1 ? t1 : (t2 ? t2 : t3);
+    target->val = sum;
+    
+    // 3. Recurse for left and right children across all 3 trees
+    target->left = mergeThreeTrees(t1 ? t1->left : nullptr, 
+                                  t2 ? t2->left : nullptr, 
+                                  t3 ? t3->left : nullptr);
+                                  
+    target->right = mergeThreeTrees(t1 ? t1->right : nullptr, 
+                                   t2 ? t2->right : nullptr, 
+                                   t3 ? t3->right : nullptr);
+    
+    return target;
+}`
+  },
+
+  'same_three_trees': {
+    id: 'same_three_trees',
+    name: '3-Way Tree Equivalence (Same 3 Trees)',
+    category: 'multi_tree',
+    subtitle: 'Simultaneous 3-way structural and node equality comparison',
+    difficulty: 'Medium',
+    timeComplexity: 'O(min(N1, N2, N3))',
+    spaceComplexity: 'O(max(H1, H2, H3)) call stack frames',
+    multiTree: true,
+    defaultMultiTrees: [
+      { id: 't1', title: 'Tree 1 (Alpha)', theme: 'sky', data: [1, 2, 3, 4, 5] },
+      { id: 't2', title: 'Tree 2 (Beta)', theme: 'purple', data: [1, 2, 3, 4, 5] },
+      { id: 't3', title: 'Tree 3 (Gamma)', theme: 'emerald', data: [1, 2, 3, 4, 5] },
+    ],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Compares 3 trees at every position. Validates that all 3 trees match both topologically and in node values at every node.',
+    cppCode: `bool isSameThreeTrees(TreeNode* t1, TreeNode* t2, TreeNode* t3) {
+    // 1. If all 3 are null -> identical empty branches
+    if (!t1 && !t2 && !t3) return true;
+    
+    // 2. Structural mismatch across any of the 3 trees
+    if (!t1 || !t2 || !t3) return false;
+    
+    // 3. Node value mismatch
+    if (t1->val != t2->val || t2->val != t3->val) return false;
+    
+    // 4. Recurse across left and right children for all 3 trees
+    return isSameThreeTrees(t1->left, t2->left, t3->left) &&
+           isSameThreeTrees(t1->right, t2->right, t3->right);
+}`
+  },
+
   // ================= BST OPERATIONS =================
   'bst_insert': {
     id: 'bst_insert',
@@ -355,6 +517,42 @@ vector<int> postorderTraversal(TreeNode* root) {
 }`
   },
 
+  'flatten_binary_tree': {
+    id: 'flatten_binary_tree',
+    name: 'Flatten Binary Tree to Linked List',
+    category: 'tree_dsa',
+    subtitle: 'LeetCode 114 — In-place pointer rewiring into right-skewed Linked List',
+    difficulty: 'Medium',
+    timeComplexity: 'O(N) time with O(1) auxiliary space',
+    spaceComplexity: 'O(1) extra memory (in-place pointer transformation)',
+    defaultTree: [1, 2, 5, 3, 4, null, 6],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Flattens a binary tree into a linked list in-place along right child pointers matching pre-order traversal order (1 -> 2 -> 3 -> 4 -> 5 -> 6), setting all left pointers to nullptr.',
+    cppCode: `// LeetCode 114: Flatten Binary Tree to Linked List
+void flatten(TreeNode* root) {
+    TreeNode* curr = root;
+    while (curr != nullptr) {
+        if (curr->left != nullptr) {
+            // Find rightmost node in left subtree (predecessor)
+            TreeNode* prev = curr->left;
+            while (prev->right != nullptr) {
+                prev = prev->right;
+            }
+            
+            // 1. Splice curr's right subtree to predecessor's right
+            prev->right = curr->right;
+            // 2. Move left subtree to right
+            curr->right = curr->left;
+            // 3. Nullify left child pointer
+            curr->left = nullptr;
+        }
+        // Move to next node in right chain
+        curr = curr->right;
+    }
+}`
+  },
+
   'lca_bst': {
     id: 'lca_bst',
     name: 'LCA in BST',
@@ -542,7 +740,67 @@ bool isSymmetric(TreeNode* root) {
 }`
   },
 
-  // ================= RECURSION VISUALIZER =================
+  // ================= RECURSION DEEP-DIVE =================
+  'merge_sort': {
+    id: 'merge_sort',
+    name: 'Merge Sort (Divide & Conquer)',
+    category: 'recursion',
+    subtitle: 'Recursive array splitting and bottom-up sorted merging',
+    difficulty: 'Medium',
+    timeComplexity: 'O(N log N) in all cases',
+    spaceComplexity: 'O(N) aux memory + O(log N) stack',
+    defaultTree: [],
+    defaultArray: [38, 27, 43, 3, 9, 82, 10],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Divide & conquer: recursively splits array in half down to single-element base cases, then combines sorted subarrays bottom-up using two pointers.',
+    cppCode: `void merge(vector<int>& arr, int l, int mid, int r);
+
+void mergeSort(vector<int>& arr, int l, int r) {
+    // Base Case: 1 element or invalid range
+    if (l >= r) {
+        return;
+    }
+    
+    // 1. Divide: Find midpoint
+    int mid = l + (r - l) / 2;
+    
+    // 2. Recurse on Left and Right halves
+    mergeSort(arr, l, mid);
+    mergeSort(arr, mid + 1, r);
+    
+    // 3. Conquer: Merge the two sorted halves
+    merge(arr, l, mid, r);
+}`
+  },
+
+  'quick_sort': {
+    id: 'quick_sort',
+    name: 'Quick Sort (Partitioning & Recursion)',
+    category: 'recursion',
+    subtitle: 'Pivot partitioning and recursive sub-array sorting',
+    difficulty: 'Medium',
+    timeComplexity: 'O(N log N) avg, O(N^2) worst',
+    spaceComplexity: 'O(log N) call stack',
+    defaultTree: [],
+    defaultArray: [10, 80, 30, 90, 40, 50, 70],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'Selects a pivot, partitions elements smaller to the left and larger to the right, then recursively applies quicksort to both partitions.',
+    cppCode: `int partition(vector<int>& arr, int low, int high);
+
+void quickSort(vector<int>& arr, int low, int high) {
+    if (low < high) {
+        // 1. Partition array around pivot
+        int pi = partition(arr, low, high);
+        
+        // 2. Recursively sort elements before and after pivot
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}`
+  },
+
   'fibonacci_recursion': {
     id: 'fibonacci_recursion',
     name: 'Fibonacci Recursion Tree',
@@ -568,6 +826,68 @@ bool isSymmetric(TreeNode* root) {
     
     // Combine results
     return left + right;
+}`
+  },
+
+  'subsets_backtracking': {
+    id: 'subsets_backtracking',
+    name: 'Subsets / Power Set (Backtracking)',
+    category: 'recursion',
+    subtitle: 'Binary decision tree: Pick vs Don’t Pick',
+    difficulty: 'Medium',
+    timeComplexity: 'O(2^N)',
+    spaceComplexity: 'O(N) recursion depth',
+    defaultTree: [],
+    defaultArray: [1, 2, 3],
+    defaultParams: {},
+    paramConfigs: [],
+    summary: 'At each index, makes a binary decision: either include nums[i] in the current subset and recurse, or backtrack and exclude it.',
+    cppCode: `void generateSubsets(vector<int>& nums, int index, vector<int>& current, vector<vector<int>>& result) {
+    // Base Case: explored all elements
+    if (index == nums.size()) {
+        result.push_back(current);
+        return;
+    }
+    
+    // Decision 1: Pick / Include nums[index]
+    current.push_back(nums[index]);
+    generateSubsets(nums, index + 1, current, result);
+    
+    // Decision 2: Backtrack & Don't Pick (Exclude)
+    current.pop_back();
+    generateSubsets(nums, index + 1, current, result);
+}`
+  },
+
+  'tower_of_hanoi': {
+    id: 'tower_of_hanoi',
+    name: 'Tower of Hanoi (3-Pegs Recursion)',
+    category: 'recursion',
+    subtitle: 'Classic 3-rod disk movement recursion tree',
+    difficulty: 'Easy',
+    timeComplexity: 'O(2^N - 1)',
+    spaceComplexity: 'O(N) stack frames',
+    defaultTree: [],
+    defaultParams: { n: 3 },
+    paramConfigs: [
+      { name: 'n', label: 'Disks (N)', type: 'number', default: 3, min: 1, max: 4 }
+    ],
+    summary: 'Recursively moves n-1 disks from source to auxiliary, moves the largest disk directly to destination, and then moves the n-1 disks from auxiliary to destination.',
+    cppCode: `void towerOfHanoi(int n, char fromRod, char toRod, char auxRod) {
+    // Base Case
+    if (n == 1) {
+        cout << "Move disk 1: " << fromRod << " -> " << toRod << endl;
+        return;
+    }
+    
+    // 1. Move n-1 disks source -> aux
+    towerOfHanoi(n - 1, fromRod, auxRod, toRod);
+    
+    // 2. Move nth disk source -> dest
+    cout << "Move disk " << n << ": " << fromRod << " -> " << toRod << endl;
+    
+    // 3. Move n-1 disks aux -> dest
+    towerOfHanoi(n - 1, auxRod, toRod, fromRod);
 }`
   },
 
